@@ -14,7 +14,7 @@ export default function AuthScreen() {
         style={styles.gradient}
       >
         <View style={styles.header}>
-          <Text style={styles.logo}>JobClick</Text>
+          <Text style={styles.logo}>Hyrizona</Text>
           <Text style={styles.tagline}>Your gateway to opportunities</Text>
         </View>
 

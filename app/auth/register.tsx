@@ -77,7 +77,7 @@ export default function RegisterScreen() {
             </TouchableOpacity>
             
             <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>Join JobClick to discover opportunities</Text>
+            <Text style={styles.subtitle}>Join Hyrizona to discover opportunities</Text>
           </View>
 
           <View style={styles.form}>

@@ -38,7 +38,7 @@ export default function UserTypeScreen() {
 
   const handleContinue = () => {
     if (!selectedType) {
-      Alert.alert('Selection Required', 'Please select how you plan to use JobClick');
+      Alert.alert('Selection Required', 'Please select how you plan to use Hyrizona');
       return;
     }
     

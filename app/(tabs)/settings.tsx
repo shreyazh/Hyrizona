@@ -253,7 +253,7 @@ export default function SettingsScreen() {
           
           <SettingItem
             icon={Star}
-            title="Rate JobClick"
+            title="Rate Hyrizona"
             subtitle="Share your feedback on the app store"
             onPress={() => console.log('Rate app')}
           />
@@ -282,8 +282,8 @@ export default function SettingsScreen() {
 
         {/* App Info */}
         <View style={styles.appInfo}>
-          <Text style={styles.appVersion}>JobClick v1.0.0</Text>
-          <Text style={styles.appCopyright}>© 2024 JobClick. All rights reserved.</Text>
+          <Text style={styles.appVersion}>Hyrizona v1.0.0</Text>
+          <Text style={styles.appCopyright}>© 2025 Hyrizona. All rights reserved to MatrixAI.</Text>
         </View>
       </ScrollView>
     </SafeAreaView>

@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "JobClick",
-    "slug": "job-click",
+    "name": "Hyrizona",
+    "slug": "hyrizona",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "jobclick",
+    "scheme": "hyrizona",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
