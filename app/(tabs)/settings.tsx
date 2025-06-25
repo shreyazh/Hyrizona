@@ -39,6 +39,8 @@ Notifications.setNotificationHandler({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
   }),
 });
 
@@ -374,7 +376,7 @@ export default function SettingsScreen() {
             icon={Bell}
             title="Notifications"
             subtitle="Manage your notification preferences"
-            onPress={() => Alert.alert('Notifications', 'Notification settings are managed below')}
+            onPress={() => router.push('/settings-screens/_notifications-settings')}
           />
           
           <SettingItem
@@ -398,7 +400,7 @@ export default function SettingsScreen() {
             icon={Shield}
             title="Privacy & Security"
             subtitle="Manage your privacy settings and security"
-            onPress={handlePrivacySecurity}
+            onPress={() => router.push('/settings-screens/_privacy-security')}
           />
           
           <SettingItem

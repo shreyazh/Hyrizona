@@ -152,7 +152,7 @@ export default function ProfileScreen() {
               <Text style={styles.userName}>Shreyash Srivastva</Text>
               <View style={styles.locationRow}>
                 <MapPin size={14} color="rgba(255, 255, 255, 0.8)" />
-                <Text style={styles.location}>New York, USA</Text>
+                <Text style={styles.location}>Lucknow, India</Text>
               </View>
               <View style={styles.verificationRow}>
                 <CheckCircle size={16} color="#10B981" />
