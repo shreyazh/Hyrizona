@@ -146,13 +146,13 @@ export default function ProfileScreen() {
         >
           <View style={styles.profileInfo}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>JD</Text>
+              <Text style={styles.avatarText}>SS</Text>
             </View>
             <View style={styles.userInfo}>
-              <Text style={styles.userName}>John Doe</Text>
+              <Text style={styles.userName}>Shreyash Srivastva</Text>
               <View style={styles.locationRow}>
                 <MapPin size={14} color="rgba(255, 255, 255, 0.8)" />
-                <Text style={styles.location}>New York, NY</Text>
+                <Text style={styles.location}>New York, USA</Text>
               </View>
               <View style={styles.verificationRow}>
                 <CheckCircle size={16} color="#10B981" />

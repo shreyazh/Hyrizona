@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -6,14 +6,20 @@ import {
   ScrollView, 
   TouchableOpacity,
   Switch,
-  Alert
+  Alert,
+  Linking,
+  Platform
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
+import * as Location from 'expo-location';
 import { 
   Bell, 
   MapPin, 
   Shield, 
-  HelpCirc, 
+  HelpCircle, 
   LogOut,
   ChevronRight,
   Globe,
@@ -21,10 +27,23 @@ import {
   Smartphone,
   CreditCard,
   FileText,
-  Star
+  Star,
+  ExternalLink,
+  CheckCircle,
+  XCircle
 } from 'lucide-react-native';
 
+// Configure notifications
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
+
 export default function SettingsScreen() {
+  const router = useRouter();
   const [notifications, setNotifications] = useState({
     jobAlerts: true,
     messages: true,
@@ -37,13 +56,125 @@ export default function SettingsScreen() {
     locationSharing: true
   });
 
+  const [locationPermission, setLocationPermission] = useState<'granted' | 'denied' | 'undetermined'>('undetermined');
+  const [notificationPermission, setNotificationPermission] = useState<'granted' | 'denied' | 'undetermined'>('undetermined');
+
+  // Load saved settings on component mount
+  useEffect(() => {
+    loadSettings();
+    checkPermissions();
+  }, []);
+
+  const loadSettings = async () => {
+    try {
+      const savedNotifications = await AsyncStorage.getItem('notifications');
+      const savedPreferences = await AsyncStorage.getItem('preferences');
+      
+      if (savedNotifications) {
+        setNotifications(JSON.parse(savedNotifications));
+      }
+      if (savedPreferences) {
+        setPreferences(JSON.parse(savedPreferences));
+      }
+    } catch (error) {
+      console.log('Error loading settings:', error);
+    }
+  };
+
+  const saveSettings = async (type: 'notifications' | 'preferences', data: any) => {
+    try {
+      await AsyncStorage.setItem(type, JSON.stringify(data));
+    } catch (error) {
+      console.log('Error saving settings:', error);
+    }
+  };
+
+  const checkPermissions = async () => {
+    // Check location permission
+    const locationStatus = await Location.getForegroundPermissionsAsync();
+    setLocationPermission(locationStatus.status);
+
+    // Check notification permission
+    const notificationStatus = await Notifications.getPermissionsAsync();
+    setNotificationPermission(notificationStatus.status);
+  };
+
+  const handleNotificationToggle = async (key: keyof typeof notifications) => {
+    const newNotifications = { ...notifications, [key]: !notifications[key] };
+    setNotifications(newNotifications);
+    await saveSettings('notifications', newNotifications);
+
+    // If enabling push notifications, request permission
+    if (key === 'push' && newNotifications.push) {
+      const { status } = await Notifications.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'Please enable notifications in your device settings to receive job alerts.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() }
+          ]
+        );
+        // Revert the toggle if permission denied
+        setNotifications(notifications);
+        await saveSettings('notifications', notifications);
+      }
+    }
+  };
+
+  const handlePreferenceToggle = async (key: keyof typeof preferences) => {
+    const newPreferences = { ...preferences, [key]: !preferences[key] };
+    setPreferences(newPreferences);
+    await saveSettings('preferences', newPreferences);
+
+    // Handle location sharing toggle
+    if (key === 'locationSharing') {
+      if (newPreferences.locationSharing) {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert(
+            'Location Permission Required',
+            'Location access is needed to show you nearby job opportunities.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Open Settings', onPress: () => Linking.openSettings() }
+            ]
+          );
+          // Revert the toggle if permission denied
+          setPreferences(preferences);
+          await saveSettings('preferences', preferences);
+        }
+      }
+    }
+  };
+
   const handleLogout = () => {
     Alert.alert(
       'Sign Out',
       'Are you sure you want to sign out?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Sign Out', style: 'destructive', onPress: () => console.log('Logout') }
+        { 
+          text: 'Sign Out', 
+          style: 'destructive', 
+          onPress: async () => {
+            try {
+              // Clear stored data
+              await AsyncStorage.multiRemove([
+                'notifications',
+                'preferences',
+                'userToken',
+                'userData'
+              ]);
+              // Navigate to auth
+              router.replace('/auth');
+            } catch (error) {
+              console.log('Error during logout:', error);
+              router.replace('/auth');
+            }
+          }
+        }
       ]
     );
   };
@@ -54,7 +185,118 @@ export default function SettingsScreen() {
       'This action cannot be undone. All your data will be permanently deleted.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => console.log('Delete account') }
+        { 
+          text: 'Delete', 
+          style: 'destructive', 
+          onPress: async () => {
+            try {
+              // Clear all stored data
+              await AsyncStorage.clear();
+              Alert.alert('Account Deleted', 'Your account has been successfully deleted.');
+              router.replace('/auth');
+            } catch (error) {
+              console.log('Error deleting account:', error);
+              router.replace('/auth');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const openExternalLink = (url: string, title: string) => {
+    Linking.canOpenURL(url).then(supported => {
+      if (supported) {
+        Linking.openURL(url);
+      } else {
+        Alert.alert('Error', `Cannot open ${title}`);
+      }
+    });
+  };
+
+  const handleRateApp = () => {
+    const storeUrl = Platform.OS === 'ios' 
+      ? 'https://apps.apple.com/app/hyrizona/id123456789'
+      : 'https://play.google.com/store/apps/details?id=com.hyrizona.app';
+    
+    openExternalLink(storeUrl, 'App Store');
+  };
+
+  const handleHelpCenter = () => {
+    openExternalLink('https://help.hyrizona.com', 'Help Center');
+  };
+
+  const handleTermsPrivacy = () => {
+    openExternalLink('https://hyrizona.com/terms', 'Terms & Privacy');
+  };
+
+  const handleLanguageSelect = () => {
+    Alert.alert(
+      'Language',
+      'Select your preferred language',
+      [
+        { text: 'English (US)', onPress: () => console.log('Language: English') },
+        { text: 'Spanish', onPress: () => console.log('Language: Spanish') },
+        { text: 'French', onPress: () => console.log('Language: French') },
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    );
+  };
+
+  const handleAppPreferences = () => {
+    Alert.alert(
+      'App Preferences',
+      'Customize your app experience',
+      [
+        { text: 'Clear Cache', onPress: () => Alert.alert('Success', 'Cache cleared successfully') },
+        { text: 'Reset Settings', onPress: () => {
+          Alert.alert(
+            'Reset Settings',
+            'Are you sure you want to reset all settings to default?',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Reset', onPress: () => {
+                setNotifications({
+                  jobAlerts: true,
+                  messages: true,
+                  marketing: false,
+                  push: true
+                });
+                setPreferences({
+                  darkMode: false,
+                  locationSharing: true
+                });
+                Alert.alert('Success', 'Settings reset to default');
+              }}
+            ]
+          );
+        }},
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    );
+  };
+
+  const handlePaymentMethods = () => {
+    Alert.alert(
+      'Payment Methods',
+      'Manage your payment and payout methods',
+      [
+        { text: 'Add Payment Method', onPress: () => Alert.alert('Coming Soon', 'Payment method management will be available soon') },
+        { text: 'View Transactions', onPress: () => Alert.alert('Coming Soon', 'Transaction history will be available soon') },
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    );
+  };
+
+  const handlePrivacySecurity = () => {
+    Alert.alert(
+      'Privacy & Security',
+      'Manage your privacy settings and security',
+      [
+        { text: 'Change Password', onPress: () => Alert.alert('Coming Soon', 'Password change will be available soon') },
+        { text: 'Two-Factor Auth', onPress: () => Alert.alert('Coming Soon', 'Two-factor authentication will be available soon') },
+        { text: 'Data Export', onPress: () => Alert.alert('Coming Soon', 'Data export will be available soon') },
+        { text: 'Cancel', style: 'cancel' }
       ]
     );
   };
@@ -65,7 +307,9 @@ export default function SettingsScreen() {
     subtitle, 
     onPress, 
     showChevron = true,
-    rightElement 
+    rightElement,
+    showPermissionStatus = false,
+    permissionStatus
   }: {
     icon: any;
     title: string;
@@ -73,6 +317,8 @@ export default function SettingsScreen() {
     onPress?: () => void;
     showChevron?: boolean;
     rightElement?: React.ReactNode;
+    showPermissionStatus?: boolean;
+    permissionStatus?: 'granted' | 'denied' | 'undetermined';
   }) => (
     <TouchableOpacity 
       style={styles.settingItem}
@@ -86,6 +332,21 @@ export default function SettingsScreen() {
         <View style={styles.settingText}>
           <Text style={styles.settingTitle}>{title}</Text>
           {subtitle && <Text style={styles.settingSubtitle}>{subtitle}</Text>}
+          {showPermissionStatus && permissionStatus && (
+            <View style={styles.permissionStatus}>
+              {permissionStatus === 'granted' ? (
+                <CheckCircle size={14} color="#10B981" />
+              ) : (
+                <XCircle size={14} color="#EF4444" />
+              )}
+              <Text style={[
+                styles.permissionText,
+                { color: permissionStatus === 'granted' ? '#10B981' : '#EF4444' }
+              ]}>
+                {permissionStatus === 'granted' ? 'Permission granted' : 'Permission required'}
+              </Text>
+            </View>
+          )}
         </View>
       </View>
       
@@ -113,7 +374,7 @@ export default function SettingsScreen() {
             icon={Bell}
             title="Notifications"
             subtitle="Manage your notification preferences"
-            onPress={() => console.log('Notifications')}
+            onPress={() => Alert.alert('Notifications', 'Notification settings are managed below')}
           />
           
           <SettingItem
@@ -121,12 +382,12 @@ export default function SettingsScreen() {
             title="Location Services"
             subtitle="Control location sharing and job discovery"
             showChevron={false}
+            showPermissionStatus={true}
+            permissionStatus={locationPermission}
             rightElement={
               <Switch
                 value={preferences.locationSharing}
-                onValueChange={(value) => 
-                  setPreferences(prev => ({ ...prev, locationSharing: value }))
-                }
+                onValueChange={() => handlePreferenceToggle('locationSharing')}
                 trackColor={{ false: '#E5E7EB', true: '#DBEAFE' }}
                 thumbColor={preferences.locationSharing ? '#2563EB' : '#9CA3AF'}
               />
@@ -137,14 +398,14 @@ export default function SettingsScreen() {
             icon={Shield}
             title="Privacy & Security"
             subtitle="Manage your privacy settings and security"
-            onPress={() => console.log('Privacy')}
+            onPress={handlePrivacySecurity}
           />
           
           <SettingItem
             icon={CreditCard}
             title="Payment Methods"
             subtitle="Manage your payment and payout methods"
-            onPress={() => console.log('Payment')}
+            onPress={handlePaymentMethods}
           />
         </View>
 
@@ -160,9 +421,7 @@ export default function SettingsScreen() {
             rightElement={
               <Switch
                 value={preferences.darkMode}
-                onValueChange={(value) => 
-                  setPreferences(prev => ({ ...prev, darkMode: value }))
-                }
+                onValueChange={() => handlePreferenceToggle('darkMode')}
                 trackColor={{ false: '#E5E7EB', true: '#DBEAFE' }}
                 thumbColor={preferences.darkMode ? '#2563EB' : '#9CA3AF'}
               />
@@ -173,14 +432,14 @@ export default function SettingsScreen() {
             icon={Globe}
             title="Language"
             subtitle="English (US)"
-            onPress={() => console.log('Language')}
+            onPress={handleLanguageSelect}
           />
           
           <SettingItem
             icon={Smartphone}
             title="App Preferences"
             subtitle="Customize your app experience"
-            onPress={() => console.log('App preferences')}
+            onPress={handleAppPreferences}
           />
         </View>
 
@@ -196,9 +455,7 @@ export default function SettingsScreen() {
             rightElement={
               <Switch
                 value={notifications.jobAlerts}
-                onValueChange={(value) => 
-                  setNotifications(prev => ({ ...prev, jobAlerts: value }))
-                }
+                onValueChange={() => handleNotificationToggle('jobAlerts')}
                 trackColor={{ false: '#E5E7EB', true: '#DBEAFE' }}
                 thumbColor={notifications.jobAlerts ? '#2563EB' : '#9CA3AF'}
               />
@@ -213,9 +470,7 @@ export default function SettingsScreen() {
             rightElement={
               <Switch
                 value={notifications.messages}
-                onValueChange={(value) => 
-                  setNotifications(prev => ({ ...prev, messages: value }))
-                }
+                onValueChange={() => handleNotificationToggle('messages')}
                 trackColor={{ false: '#E5E7EB', true: '#DBEAFE' }}
                 thumbColor={notifications.messages ? '#2563EB' : '#9CA3AF'}
               />
@@ -227,12 +482,12 @@ export default function SettingsScreen() {
             title="Push Notifications"
             subtitle="Receive push notifications on your device"
             showChevron={false}
+            showPermissionStatus={true}
+            permissionStatus={notificationPermission}
             rightElement={
               <Switch
                 value={notifications.push}
-                onValueChange={(value) => 
-                  setNotifications(prev => ({ ...prev, push: value }))
-                }
+                onValueChange={() => handleNotificationToggle('push')}
                 trackColor={{ false: '#E5E7EB', true: '#DBEAFE' }}
                 thumbColor={notifications.push ? '#2563EB' : '#9CA3AF'}
               />
@@ -245,24 +500,24 @@ export default function SettingsScreen() {
           <Text style={styles.sectionTitle}>Support</Text>
           
           <SettingItem
-            icon={HelpCirc}
+            icon={HelpCircle}
             title="Help Center"
             subtitle="Get help and find answers to common questions"
-            onPress={() => console.log('Help')}
+            onPress={handleHelpCenter}
           />
           
           <SettingItem
             icon={Star}
             title="Rate Hyrizona"
             subtitle="Share your feedback on the app store"
-            onPress={() => console.log('Rate app')}
+            onPress={handleRateApp}
           />
           
           <SettingItem
             icon={FileText}
             title="Terms & Privacy"
             subtitle="Read our terms of service and privacy policy"
-            onPress={() => console.log('Terms')}
+            onPress={handleTermsPrivacy}
           />
         </View>
 
@@ -360,6 +615,16 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: 'Inter-Regular',
     color: '#6B7280',
+  },
+  permissionStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  permissionText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+    marginLeft: 4,
   },
   settingRight: {
     flexDirection: 'row',
