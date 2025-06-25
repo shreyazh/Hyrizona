@@ -73,7 +73,7 @@ export default function OnboardingScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.logo}>JobClick</Text>
+        <Text style={styles.logo}>Hyrizona</Text>
         <TouchableOpacity 
           style={styles.skipButton}
           onPress={() => router.push('/onboarding/user-type')}

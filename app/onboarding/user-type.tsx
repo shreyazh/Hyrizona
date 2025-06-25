@@ -58,7 +58,7 @@ export default function UserTypeScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>How do you plan to use JobClick?</Text>
+        <Text style={styles.title}>How do you plan to use Hyrizona?</Text>
         <Text style={styles.subtitle}>
           Choose your primary role to personalize your experience
         </Text>
