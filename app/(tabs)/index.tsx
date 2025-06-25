@@ -27,7 +27,7 @@ const mockJobs = [
   {
     id: '1',
     title: 'Freelance Graphic Designer',
-    company: 'TechStartup Inc.',
+    company: 'Praveen Inc.',
     location: 'Downtown, 0.5 km',
     pay: '$25/hr',
     duration: '2-3 hours',
@@ -41,7 +41,7 @@ const mockJobs = [
   {
     id: '2',
     title: 'Event Setup Assistant',
-    company: 'EventPro Agency',
+    company: 'Anubhav Agency',
     location: 'City Center, 1.2 km',
     pay: '$18/hr',
     duration: '4-6 hours',
@@ -54,7 +54,7 @@ const mockJobs = [
   {
     id: '3',
     title: 'Content Writer',
-    company: 'Marketing Solutions',
+    company: 'Shailaja Solutions',
     location: 'Remote/Nearby, 2.1 km',
     pay: '$20/hr',
     duration: '1-2 weeks',
