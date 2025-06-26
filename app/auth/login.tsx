@@ -14,29 +14,63 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Eye, EyeOff, Mail, Lock, ArrowLeft } from 'lucide-react-native';
+import { useUser } from '../../contexts/UserContext';
+import { validateLoginForm } from '../../utils/validation';
+
+const supabaseUrl = 'YOUR_SUPABASE_URL';
+const supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const { login } = useUser();
+  const [formData, setFormData] = useState({
+    email: '',
+    password: ''
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+    // Clear previous errors
+    setErrors({});
+    
+    // Validate form
+    const validation = validateLoginForm(formData);
+    if (!validation.isValid) {
+      setErrors(validation.errors);
       return;
     }
 
     setLoading(true);
     
-    // Simulate login process
-    setTimeout(() => {
+    try {
+      const result = await login(formData.email, formData.password);
+      
+      if (result.success) {
+        router.replace('/(tabs)');
+      } else {
+        Alert.alert('Error', result.error || 'Login failed. Please check your credentials.');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+    } finally {
       setLoading(false);
-      // On successful login, navigate to main app
-      router.replace('/(tabs)');
-    }, 2000);
+    }
   };
+
+  const updateFormData = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
+    }
+  };
+
+  const getInputStyle = (field: string) => [
+    styles.input,
+    errors[field] && styles.inputError
+  ];
 
   const handleSocialLogin = (provider: string) => {
     Alert.alert('Coming Soon', `${provider} login will be available soon`);
@@ -66,25 +100,28 @@ export default function LoginScreen() {
               <View style={styles.inputWrapper}>
                 <Mail size={20} color="#6B7280" style={styles.inputIcon} />
                 <TextInput
-                  style={styles.input}
+                  style={getInputStyle('email')}
                   placeholder="Email address"
-                  value={email}
-                  onChangeText={setEmail}
+                  value={formData.email}
+                  onChangeText={(value) => updateFormData('email', value)}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoComplete="email"
                 />
               </View>
+              {errors.email && (
+                <Text style={styles.errorText}>{errors.email}</Text>
+              )}
             </View>
 
             <View style={styles.inputContainer}>
               <View style={styles.inputWrapper}>
                 <Lock size={20} color="#6B7280" style={styles.inputIcon} />
                 <TextInput
-                  style={[styles.input, styles.passwordInput]}
+                  style={[getInputStyle('password'), styles.passwordInput]}
                   placeholder="Password"
-                  value={password}
-                  onChangeText={setPassword}
+                  value={formData.password}
+                  onChangeText={(value) => updateFormData('password', value)}
                   secureTextEntry={!showPassword}
                   autoComplete="password"
                 />
@@ -99,6 +136,9 @@ export default function LoginScreen() {
                   )}
                 </TouchableOpacity>
               </View>
+              {errors.password && (
+                <Text style={styles.errorText}>{errors.password}</Text>
+              )}
             </View>
 
             <TouchableOpacity 
@@ -219,6 +259,9 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     color: '#111827',
   },
+  inputError: {
+    borderColor: '#EF4444',
+  },
   passwordInput: {
     paddingRight: 48,
   },
@@ -293,5 +336,11 @@ const styles = StyleSheet.create({
   footerLink: {
     color: '#2563EB',
     fontFamily: 'Inter-Medium',
+  },
+  errorText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: '#EF4444',
+    marginTop: 4,
   },
 });

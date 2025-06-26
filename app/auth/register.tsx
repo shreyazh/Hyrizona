@@ -14,9 +14,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Eye, EyeOff, Mail, Lock, User, ArrowLeft } from 'lucide-react-native';
+import { useUser } from '../../contexts/UserContext';
+import { validateRegistrationForm } from '../../utils/validation';
+import { PasswordStrengthIndicator } from '../../components/PasswordStrengthIndicator';
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const { register } = useUser();
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -24,42 +28,59 @@ export default function RegisterScreen() {
     password: '',
     confirmPassword: ''
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
-    const { firstName, lastName, email, password, confirmPassword } = formData;
+    // Clear previous errors
+    setErrors({});
     
-    if (!firstName || !lastName || !email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields');
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
-      return;
-    }
-
-    if (password.length < 8) {
-      Alert.alert('Error', 'Password must be at least 8 characters long');
+    // Validate form
+    const validation = validateRegistrationForm(formData);
+    if (!validation.isValid) {
+      setErrors(validation.errors);
       return;
     }
 
     setLoading(true);
     
-    // Simulate registration process
-    setTimeout(() => {
+    try {
+      const result = await register({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        password: formData.password,
+        userType: 'seeker' // Default to seeker, can be updated later
+      });
+
+      if (result.success) {
+        Alert.alert('Success', 'Account created successfully!', [
+          { text: 'OK', onPress: () => router.replace('/(tabs)') }
+        ]);
+      } else {
+        Alert.alert('Error', result.error || 'Registration failed. Please try again.');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+    } finally {
       setLoading(false);
-      Alert.alert('Success', 'Account created successfully!', [
-        { text: 'OK', onPress: () => router.replace('/(tabs)') }
-      ]);
-    }, 2000);
+    }
   };
 
   const updateFormData = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
+    }
   };
+
+  const getInputStyle = (field: string) => [
+    styles.input,
+    errors[field] && styles.inputError
+  ];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -86,26 +107,32 @@ export default function RegisterScreen() {
                 <View style={styles.inputWrapper}>
                   <User size={20} color="#6B7280" style={styles.inputIcon} />
                   <TextInput
-                    style={styles.input}
+                    style={getInputStyle('firstName')}
                     placeholder="First name"
                     value={formData.firstName}
                     onChangeText={(value) => updateFormData('firstName', value)}
                     autoCapitalize="words"
                   />
                 </View>
+                {errors.firstName && (
+                  <Text style={styles.errorText}>{errors.firstName}</Text>
+                )}
               </View>
 
               <View style={[styles.inputContainer, styles.halfWidth]}>
                 <View style={styles.inputWrapper}>
                   <User size={20} color="#6B7280" style={styles.inputIcon} />
                   <TextInput
-                    style={styles.input}
+                    style={getInputStyle('lastName')}
                     placeholder="Last name"
                     value={formData.lastName}
                     onChangeText={(value) => updateFormData('lastName', value)}
                     autoCapitalize="words"
                   />
                 </View>
+                {errors.lastName && (
+                  <Text style={styles.errorText}>{errors.lastName}</Text>
+                )}
               </View>
             </View>
 
@@ -113,7 +140,7 @@ export default function RegisterScreen() {
               <View style={styles.inputWrapper}>
                 <Mail size={20} color="#6B7280" style={styles.inputIcon} />
                 <TextInput
-                  style={styles.input}
+                  style={getInputStyle('email')}
                   placeholder="Email address"
                   value={formData.email}
                   onChangeText={(value) => updateFormData('email', value)}
@@ -122,13 +149,16 @@ export default function RegisterScreen() {
                   autoComplete="email"
                 />
               </View>
+              {errors.email && (
+                <Text style={styles.errorText}>{errors.email}</Text>
+              )}
             </View>
 
             <View style={styles.inputContainer}>
               <View style={styles.inputWrapper}>
                 <Lock size={20} color="#6B7280" style={styles.inputIcon} />
                 <TextInput
-                  style={[styles.input, styles.passwordInput]}
+                  style={[getInputStyle('password'), styles.passwordInput]}
                   placeholder="Password"
                   value={formData.password}
                   onChangeText={(value) => updateFormData('password', value)}
@@ -146,13 +176,17 @@ export default function RegisterScreen() {
                   )}
                 </TouchableOpacity>
               </View>
+              <PasswordStrengthIndicator password={formData.password} />
+              {errors.password && (
+                <Text style={styles.errorText}>{errors.password}</Text>
+              )}
             </View>
 
             <View style={styles.inputContainer}>
               <View style={styles.inputWrapper}>
                 <Lock size={20} color="#6B7280" style={styles.inputIcon} />
                 <TextInput
-                  style={[styles.input, styles.passwordInput]}
+                  style={[getInputStyle('confirmPassword'), styles.passwordInput]}
                   placeholder="Confirm password"
                   value={formData.confirmPassword}
                   onChangeText={(value) => updateFormData('confirmPassword', value)}
@@ -170,6 +204,9 @@ export default function RegisterScreen() {
                   )}
                 </TouchableOpacity>
               </View>
+              {errors.confirmPassword && (
+                <Text style={styles.errorText}>{errors.confirmPassword}</Text>
+              )}
             </View>
 
             <TouchableOpacity 
@@ -284,6 +321,9 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     color: '#111827',
   },
+  inputError: {
+    borderColor: '#EF4444',
+  },
   passwordInput: {
     paddingRight: 48,
   },
@@ -350,5 +390,10 @@ const styles = StyleSheet.create({
   footerLink: {
     color: '#2563EB',
     fontFamily: 'Inter-Medium',
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 12,
+    marginTop: 4,
   },
 });

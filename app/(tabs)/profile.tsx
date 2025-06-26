@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -20,12 +20,24 @@ import {
   Award,
   Briefcase,
   Users,
-  TrendingUp
+  TrendingUp,
+  LogOut
 } from 'lucide-react-native';
+import { useUser } from '../../contexts/UserContext';
+import { useRouter } from 'expo-router';
 
 export default function ProfileScreen() {
+  const { user, logout } = useUser();
+  const router = useRouter();
   const [isAvailable, setIsAvailable] = useState(true);
-  const [currentMode, setCurrentMode] = useState<'seeker' | 'poster'>('seeker');
+  const [currentMode, setCurrentMode] = useState<'seeker' | 'poster'>(user?.userType || 'seeker');
+
+  // Update currentMode when user changes
+  useEffect(() => {
+    if (user?.userType) {
+      setCurrentMode(user.userType);
+    }
+  }, [user?.userType]);
 
   const stats = {
     seeker: {
@@ -43,12 +55,40 @@ export default function ProfileScreen() {
   };
 
   const handleEditProfile = () => {
-    Alert.alert('Edit Profile', 'Profile editing feature coming soon!');
+    router.push('/settings-screens/edit-profile');
   };
 
   const handleModeSwitch = () => {
     const newMode = currentMode === 'seeker' ? 'poster' : 'seeker';
     setCurrentMode(newMode);
+  };
+
+  const handleLogout = async () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Logout', 
+          style: 'destructive',
+          onPress: async () => {
+            await logout();
+            router.replace('/auth');
+          }
+        }
+      ]
+    );
+  };
+
+  const getUserInitials = () => {
+    if (!user) return 'U';
+    return `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase();
+  };
+
+  const getUserFullName = () => {
+    if (!user) return 'User';
+    return `${user.firstName} ${user.lastName}`;
   };
 
   const renderSeekerProfile = () => (
@@ -57,11 +97,15 @@ export default function ProfileScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Skills</Text>
         <View style={styles.skillsContainer}>
-          {['UI/UX Design', 'React Native', 'Figma', 'Photoshop', 'Branding', 'Typography'].map((skill, index) => (
-            <View key={index} style={styles.skillTag}>
-              <Text style={styles.skillText}>{skill}</Text>
-            </View>
-          ))}
+          {user?.skills && user.skills.length > 0 ? (
+            user.skills.map((skill, index) => (
+              <View key={index} style={styles.skillTag}>
+                <Text style={styles.skillText}>{skill}</Text>
+              </View>
+            ))
+          ) : (
+            <Text style={styles.noSkillsText}>No skills added yet</Text>
+          )}
         </View>
       </View>
 
@@ -146,24 +190,38 @@ export default function ProfileScreen() {
         >
           <View style={styles.profileInfo}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>SS</Text>
+              <Text style={styles.avatarText}>{getUserInitials()}</Text>
             </View>
             <View style={styles.userInfo}>
-              <Text style={styles.userName}>Shreyash Srivastva</Text>
+              <Text style={styles.userName}>{getUserFullName()}</Text>
               <View style={styles.locationRow}>
                 <MapPin size={14} color="rgba(255, 255, 255, 0.8)" />
-                <Text style={styles.location}>Lucknow, India</Text>
+                <Text style={styles.location}>{user?.location || 'Location not set'}</Text>
               </View>
               <View style={styles.verificationRow}>
-                <CheckCircle size={16} color="#10B981" />
-                <Text style={styles.verifiedText}>Verified Account</Text>
+                {user?.isVerified ? (
+                  <>
+                    <CheckCircle size={16} color="#10B981" />
+                    <Text style={styles.verifiedText}>Verified Account</Text>
+                  </>
+                ) : (
+                  <>
+                    <Award size={16} color="#F59E0B" />
+                    <Text style={styles.verifiedText}>Unverified Account</Text>
+                  </>
+                )}
               </View>
             </View>
           </View>
           
-          <TouchableOpacity style={styles.editButton} onPress={handleEditProfile}>
-            <Edit size={20} color="#2563EB" />
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity style={styles.editButton} onPress={handleEditProfile}>
+              <Edit size={20} color="#2563EB" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+              <LogOut size={20} color="#EF4444" />
+            </TouchableOpacity>
+          </View>
         </LinearGradient>
 
         {/* Mode Switch */}
@@ -200,54 +258,45 @@ export default function ProfileScreen() {
         </View>
 
         {/* Availability Toggle */}
-        {currentMode === 'seeker' && (
-          <View style={styles.availabilitySection}>
-            <View style={styles.availabilityRow}>
-              <View>
-                <Text style={styles.availabilityTitle}>Available for Work</Text>
-                <Text style={styles.availabilitySubtitle}>
-                  Let employers know you're ready for new opportunities
-                </Text>
-              </View>
-              <Switch
-                value={isAvailable}
-                onValueChange={setIsAvailable}
-                trackColor={{ false: '#E5E7EB', true: '#DBEAFE' }}
-                thumbColor={isAvailable ? '#2563EB' : '#9CA3AF'}
-              />
-            </View>
-          </View>
-        )}
-
-        {/* Bio */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>About</Text>
-          <Text style={styles.bio}>
-            {currentMode === 'seeker' 
-              ? "Experienced designer with 5+ years in UI/UX design and mobile app development. Passionate about creating user-friendly interfaces and solving complex design challenges."
-              : "We are always looking for talented individuals to join our projects. We believe in fair compensation and creating great working relationships with freelancers."
-            }
-          </Text>
+          <View style={styles.availabilityRow}>
+            <View>
+              <Text style={styles.availabilityTitle}>Available for Work</Text>
+              <Text style={styles.availabilitySubtitle}>
+                {isAvailable ? 'You are currently available' : 'You are currently unavailable'}
+              </Text>
+            </View>
+            <Switch
+              value={isAvailable}
+              onValueChange={setIsAvailable}
+              trackColor={{ false: '#E5E7EB', true: '#2563EB' }}
+              thumbColor={isAvailable ? '#FFFFFF' : '#FFFFFF'}
+            />
+          </View>
         </View>
 
-        {/* Dynamic Content Based on Mode */}
+        {/* Profile Content */}
         {currentMode === 'seeker' ? renderSeekerProfile() : renderPosterProfile()}
 
-        {/* Achievements */}
+        {/* Account Info */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Achievements</Text>
-          <View style={styles.achievementsList}>
-            <View style={styles.achievement}>
-              <Award size={20} color="#F59E0B" />
-              <Text style={styles.achievementText}>Top Rated {currentMode === 'seeker' ? 'Freelancer' : 'Employer'}</Text>
+          <Text style={styles.sectionTitle}>Account Information</Text>
+          <View style={styles.accountInfo}>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Email</Text>
+              <Text style={styles.infoValue}>{user?.email || 'Not available'}</Text>
             </View>
-            <View style={styles.achievement}>
-              <CheckCircle size={20} color="#10B981" />
-              <Text style={styles.achievementText}>100% Job Success Score</Text>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Member Since</Text>
+              <Text style={styles.infoValue}>
+                {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Not available'}
+              </Text>
             </View>
-            <View style={styles.achievement}>
-              <Calendar size={20} color="#2563EB" />
-              <Text style={styles.achievementText}>Member since 2023</Text>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Account Type</Text>
+              <Text style={styles.infoValue}>
+                {user?.userType === 'seeker' ? 'Job Seeker' : 'Job Poster'}
+              </Text>
             </View>
           </View>
         </View>
@@ -321,6 +370,14 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   editButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'white',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logoutButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -421,6 +478,12 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Medium',
     color: '#2563EB',
   },
+  noSkillsText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: '#6B7280',
+    textAlign: 'center',
+  },
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -474,6 +537,28 @@ const styles = StyleSheet.create({
   achievementText: {
     fontSize: 15,
     fontFamily: 'Inter-Medium',
+    color: '#374151',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  accountInfo: {
+    gap: 12,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  infoLabel: {
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
+    color: '#6B7280',
+  },
+  infoValue: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
     color: '#374151',
   },
 });
