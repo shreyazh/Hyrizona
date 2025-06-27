@@ -62,6 +62,10 @@ export const validateRegistrationForm = (formData: {
   email: string;
   password: string;
   confirmPassword: string;
+  phone?: string;
+  address?: string;
+  profilePhoto?: string;
+  idProof?: string;
 }): { isValid: boolean; errors: Record<string, string> } => {
   const errors: Record<string, string> = {};
   
@@ -101,6 +105,25 @@ export const validateRegistrationForm = (formData: {
     errors.confirmPassword = 'Please confirm your password';
   } else if (formData.password !== formData.confirmPassword) {
     errors.confirmPassword = 'Passwords do not match';
+  }
+  
+  // Phone validation
+  if (!formData.phone || !formData.phone.trim()) {
+    errors.phone = 'Phone number is required';
+  } else if (!/^\+?[0-9]{7,15}$/.test(formData.phone.replace(/\s+/g, ''))) {
+    errors.phone = 'Please enter a valid phone number';
+  }
+  
+  // Address validation
+  if (!formData.address || !formData.address.trim()) {
+    errors.address = 'Address is required';
+  }
+  
+  // ID proof validation
+  if (!formData.idProof || !formData.idProof.trim()) {
+    errors.idProof = 'Identification proof is required';
+  } else if (formData.idProof.length < 4) {
+    errors.idProof = 'Identification proof must be at least 4 characters';
   }
   
   return {

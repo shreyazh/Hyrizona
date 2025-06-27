@@ -8,7 +8,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert
+  Alert,
+  Image
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -17,6 +18,7 @@ import { Eye, EyeOff, Mail, Lock, User, ArrowLeft } from 'lucide-react-native';
 import { useUser } from '../../contexts/UserContext';
 import { validateRegistrationForm } from '../../utils/validation';
 import { PasswordStrengthIndicator } from '../../components/PasswordStrengthIndicator';
+import * as ImagePicker from 'expo-image-picker';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -26,7 +28,11 @@ export default function RegisterScreen() {
     lastName: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    phone: '',
+    address: '',
+    profilePhoto: '',
+    idProof: ''
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showPassword, setShowPassword] = useState(false);
@@ -52,13 +58,16 @@ export default function RegisterScreen() {
         lastName: formData.lastName,
         email: formData.email,
         password: formData.password,
-        userType: 'seeker' // Default to seeker, can be updated later
+        userType: 'seeker',
+        phone: formData.phone,
+        address: formData.address,
+        profilePhoto: formData.profilePhoto,
+        idProof: formData.idProof
       });
 
       if (result.success) {
-        Alert.alert('Success', 'Account created successfully!', [
-          { text: 'OK', onPress: () => router.replace('/(tabs)') }
-        ]);
+        Alert.alert('Success', 'Account created successfully!');
+        router.replace('/(tabs)');
       } else {
         Alert.alert('Error', result.error || 'Registration failed. Please try again.');
       }
@@ -82,6 +91,18 @@ export default function RegisterScreen() {
     errors[field] && styles.inputError
   ];
 
+  const pickImage = async (field: 'profilePhoto' | 'idProof') => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      updateFormData(field, result.assets[0].uri);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView 
@@ -102,6 +123,21 @@ export default function RegisterScreen() {
           </View>
 
           <View style={styles.form}>
+            <View style={styles.inputContainer}>
+              <Text style={{ marginBottom: 8, color: '#6B7280' }}>Profile Picture (optional)</Text>
+              {formData.profilePhoto ? (
+                <>
+                  <Image source={{ uri: formData.profilePhoto }} style={{ width: 80, height: 80, borderRadius: 40, marginBottom: 8 }} />
+                  <TouchableOpacity style={[styles.socialButton, { backgroundColor: '#F87171', marginBottom: 8 }]} onPress={() => updateFormData('profilePhoto', '')}>
+                    <Text style={[styles.socialButtonText, { color: 'white' }]}>Remove Photo</Text>
+                  </TouchableOpacity>
+                </>
+              ) : null}
+              <TouchableOpacity style={styles.socialButton} onPress={() => pickImage('profilePhoto')}>
+                <Text style={styles.socialButtonText}>{formData.profilePhoto ? 'Change Photo' : 'Pick a Photo'}</Text>
+              </TouchableOpacity>
+            </View>
+
             <View style={styles.row}>
               <View style={[styles.inputContainer, styles.halfWidth]}>
                 <View style={styles.inputWrapper}>
@@ -151,6 +187,52 @@ export default function RegisterScreen() {
               </View>
               {errors.email && (
                 <Text style={styles.errorText}>{errors.email}</Text>
+              )}
+            </View>
+
+            <View style={styles.inputContainer}>
+              <View style={styles.inputWrapper}>
+                <User size={20} color="#6B7280" style={styles.inputIcon} />
+                <TextInput
+                  style={getInputStyle('phone')}
+                  placeholder="Phone number"
+                  value={formData.phone}
+                  onChangeText={(value) => updateFormData('phone', value)}
+                  keyboardType="phone-pad"
+                  autoComplete="tel"
+                />
+              </View>
+              {errors.phone && (
+                <Text style={styles.errorText}>{errors.phone}</Text>
+              )}
+            </View>
+
+            <View style={styles.inputContainer}>
+              <View style={styles.inputWrapper}>
+                <User size={20} color="#6B7280" style={styles.inputIcon} />
+                <TextInput
+                  style={getInputStyle('address')}
+                  placeholder="Address"
+                  value={formData.address}
+                  onChangeText={(value) => updateFormData('address', value)}
+                  autoCapitalize="words"
+                />
+              </View>
+              {errors.address && (
+                <Text style={styles.errorText}>{errors.address}</Text>
+              )}
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={{ marginBottom: 8, color: '#6B7280' }}>Identification Proof</Text>
+              {formData.idProof ? (
+                <Image source={{ uri: formData.idProof }} style={{ width: 80, height: 80, borderRadius: 8, marginBottom: 8 }} />
+              ) : null}
+              <TouchableOpacity style={styles.socialButton} onPress={() => pickImage('idProof')}>
+                <Text style={styles.socialButtonText}>{formData.idProof ? 'Change ID Proof' : 'Upload ID Proof'}</Text>
+              </TouchableOpacity>
+              {errors.idProof && (
+                <Text style={styles.errorText}>{errors.idProof}</Text>
               )}
             </View>
 

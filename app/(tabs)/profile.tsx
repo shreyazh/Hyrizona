@@ -6,7 +6,8 @@ import {
   ScrollView, 
   TouchableOpacity,
   Switch,
-  Alert
+  Alert,
+  Image
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -91,6 +92,18 @@ export default function ProfileScreen() {
     return `${user.firstName} ${user.lastName}`;
   };
 
+  const getUserAvatar = () => {
+    if (user?.profilePhoto) {
+      return (
+        <Image
+          source={{ uri: user.profilePhoto }}
+          style={styles.avatarImage}
+        />
+      );
+    }
+    return <Text style={styles.avatarText}>{getUserInitials()}</Text>;
+  };
+
   const renderSeekerProfile = () => (
     <>
       {/* Skills */}
@@ -99,9 +112,9 @@ export default function ProfileScreen() {
         <View style={styles.skillsContainer}>
           {user?.skills && user.skills.length > 0 ? (
             user.skills.map((skill, index) => (
-              <View key={index} style={styles.skillTag}>
-                <Text style={styles.skillText}>{skill}</Text>
-              </View>
+            <View key={index} style={styles.skillTag}>
+              <Text style={styles.skillText}>{skill}</Text>
+            </View>
             ))
           ) : (
             <Text style={styles.noSkillsText}>No skills added yet</Text>
@@ -190,7 +203,7 @@ export default function ProfileScreen() {
         >
           <View style={styles.profileInfo}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{getUserInitials()}</Text>
+              {getUserAvatar()}
             </View>
             <View style={styles.userInfo}>
               <Text style={styles.userName}>{getUserFullName()}</Text>
@@ -215,9 +228,9 @@ export default function ProfileScreen() {
           </View>
           
           <View style={styles.headerActions}>
-            <TouchableOpacity style={styles.editButton} onPress={handleEditProfile}>
-              <Edit size={20} color="#2563EB" />
-            </TouchableOpacity>
+          <TouchableOpacity style={styles.editButton} onPress={handleEditProfile}>
+            <Edit size={20} color="#2563EB" />
+          </TouchableOpacity>
             <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
               <LogOut size={20} color="#EF4444" />
             </TouchableOpacity>
@@ -259,19 +272,19 @@ export default function ProfileScreen() {
 
         {/* Availability Toggle */}
         <View style={styles.section}>
-          <View style={styles.availabilityRow}>
-            <View>
-              <Text style={styles.availabilityTitle}>Available for Work</Text>
-              <Text style={styles.availabilitySubtitle}>
+            <View style={styles.availabilityRow}>
+              <View>
+                <Text style={styles.availabilityTitle}>Available for Work</Text>
+                <Text style={styles.availabilitySubtitle}>
                 {isAvailable ? 'You are currently available' : 'You are currently unavailable'}
-              </Text>
-            </View>
-            <Switch
-              value={isAvailable}
-              onValueChange={setIsAvailable}
+                </Text>
+              </View>
+              <Switch
+                value={isAvailable}
+                onValueChange={setIsAvailable}
               trackColor={{ false: '#E5E7EB', true: '#2563EB' }}
               thumbColor={isAvailable ? '#FFFFFF' : '#FFFFFF'}
-            />
+              />
           </View>
         </View>
 
@@ -287,6 +300,18 @@ export default function ProfileScreen() {
               <Text style={styles.infoValue}>{user?.email || 'Not available'}</Text>
             </View>
             <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Phone</Text>
+              <Text style={styles.infoValue}>{user?.phone || 'Not available'}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Address</Text>
+              <Text style={styles.infoValue}>{user?.address || 'Not available'}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>ID Proof</Text>
+              <Text style={styles.infoValue}>{user?.idProof || 'Not available'}</Text>
+            </View>
+            <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Member Since</Text>
               <Text style={styles.infoValue}>
                 {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Not available'}
@@ -297,6 +322,10 @@ export default function ProfileScreen() {
               <Text style={styles.infoValue}>
                 {user?.userType === 'seeker' ? 'Job Seeker' : 'Job Poster'}
               </Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Profile Picture</Text>
+              <Text style={styles.infoValue}>{user?.profilePhoto ? 'Set' : 'Not available'}</Text>
             </View>
           </View>
         </View>
@@ -333,6 +362,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    resizeMode: 'cover',
   },
   avatarText: {
     fontSize: 24,

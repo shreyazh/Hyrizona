@@ -12,6 +12,10 @@ export interface User {
   isVerified: boolean;
   createdAt: string;
   skills?: string[];
+  address?: string;
+  profilePhoto?: string;
+  idProof?: string;
+  phone?: string;
 }
 
 interface UserContextType {
@@ -30,6 +34,10 @@ interface RegisterData {
   email: string;
   password: string;
   userType: 'seeker' | 'poster';
+  address?: string;
+  profilePhoto?: string;
+  idProof?: string;
+  phone?: string;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -93,6 +101,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         location: 'New York, USA',
         isVerified: true,
         createdAt: new Date().toISOString(),
+        phone: '123-456-7890',
       };
 
       setUser(mockUser);
@@ -111,10 +120,8 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       setIsLoading(true);
       
       // TODO: Replace with actual Supabase API call
-      // For now, simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Mock user data - replace with actual API response
       const newUser: User = {
         id: Date.now().toString(),
         firstName: userData.firstName,
@@ -124,6 +131,10 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         location: 'Unknown',
         isVerified: false,
         createdAt: new Date().toISOString(),
+        address: userData.address,
+        profilePhoto: userData.profilePhoto,
+        idProof: userData.idProof,
+        phone: userData.phone,
       };
 
       setUser(newUser);
@@ -149,19 +160,10 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const updateUser = async (updates: Partial<User>) => {
     if (user) {
       try {
-        // TODO: Replace with actual Supabase API call
-        // For now, simulate API call
         await new Promise(resolve => setTimeout(resolve, 500));
-        
         const updatedUser = { ...user, ...updates };
         setUser(updatedUser);
         await saveUserToStorage(updatedUser);
-        
-        // TODO: When Supabase is connected, uncomment this:
-        // const result = await authService.updateProfile(user.id, updates);
-        // if (!result.success) {
-        //   throw new Error(result.error);
-        // }
       } catch (error) {
         console.error('Error updating user:', error);
         throw error;
