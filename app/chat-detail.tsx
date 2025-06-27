@@ -1,6 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, Image, KeyboardAvoidingView, Platform } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 
 interface Message {
@@ -30,8 +30,14 @@ export default function ChatDetail() {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+  const navigation = useNavigation();
 
   const chatName = mockChats.find(c => c.id === id)?.name || id;
+
+  useEffect(() => {
+    navigation.setOptions({ tabBarStyle: { display: 'none' } });
+    return () => navigation.setOptions({ tabBarStyle: undefined });
+  }, [navigation]);
 
   const sendMessage = async (text?: string, image?: string) => {
     if ((!text || !text.trim()) && !image) return;
@@ -87,7 +93,7 @@ export default function ChatDetail() {
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.replace('/chat')} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.replace('/(tabs)/chat')} style={styles.backButton}>
           <Text style={{ color: '#2563EB', fontSize: 18 }}>{'< Back'}</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Chat with {chatName}</Text>
@@ -196,4 +202,10 @@ const styles = StyleSheet.create({
   greetingMessage: {
     backgroundColor: '#899499', // gray
   },
-}); 
+});
+
+export const unstable_settings = {
+  initialRouteName: 'chat-detail',
+  tabBarStyle: { display: 'none' },
+  tabBarVisible: false,
+}; 

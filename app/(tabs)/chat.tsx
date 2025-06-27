@@ -164,7 +164,7 @@ export default function ChatScreen() {
         chat.id === chatId ? { ...chat, unread: 0 } : chat
       )
     );
-    router.push({ pathname: '/chat-detail', params: { id: chatId } });
+    router.push('/chat-detail?id=' + chatId);
   }, [router]);
 
   const handleMenuPress = useCallback((chatId: string) => {
