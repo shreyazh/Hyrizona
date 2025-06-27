@@ -63,7 +63,7 @@ export default function RegisterScreen() {
         address: formData.address,
         profilePhoto: formData.profilePhoto,
         idProof: formData.idProof
-      })
+      });
 
       if (result.success) {
         Alert.alert('Success', 'Account created successfully!');
