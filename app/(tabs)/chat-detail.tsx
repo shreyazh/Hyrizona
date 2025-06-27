@@ -11,6 +11,15 @@ interface Message {
   timestamp: number;
 }
 
+const mockChats = [
+  { id: '1', name: 'Shailaja' },
+  { id: '2', name: 'Praveen Srivastava' },
+  { id: '3', name: 'Anubhav Anant' },
+  { id: '4', name: 'Sanjeev' },
+  { id: '5', name: 'Sameet' },
+  { id: '6', name: 'Venu' },
+];
+
 export default function ChatDetail() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -21,6 +30,8 @@ export default function ChatDetail() {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+
+  const chatName = mockChats.find(c => c.id === id)?.name || id;
 
   const sendMessage = async (text?: string, image?: string) => {
     if ((!text || !text.trim()) && !image) return;
@@ -75,7 +86,7 @@ export default function ChatDetail() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Text style={{ color: '#2563EB', fontSize: 18 }}>{'< Back'}</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Chat with {id}</Text>
+        <Text style={styles.headerTitle}>Chat with {chatName}</Text>
       </View>
       <FlatList
         ref={flatListRef}
