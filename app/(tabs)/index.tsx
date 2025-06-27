@@ -23,7 +23,7 @@ import {
 import JobCard from '@/components/JobCard';
 import LocationHeader from '@/components/LocationHeader';
 
-const mockJobs = [
+export const mockJobs = [
   {
     id: '1',
     title: 'Freelance Graphic Designer',

@@ -9,10 +9,15 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search as SearchIcon, Filter, MapPin, Sliders } from 'lucide-react-native';
+import JobCard from '../../components/JobCard';
+import { mockJobs } from './index';
 
 export default function SearchScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [jobs, setJobs] = useState(mockJobs);
+  const [savedJobs, setSavedJobs] = useState<string[]>([]);
 
   const filters = [
     { id: 'all', label: 'All Jobs', count: 234 },
@@ -30,6 +35,44 @@ export default function SearchScreen() {
     { id: '5', name: 'Customer Service', jobs: 18, color: '#EF4444' },
     { id: '6', name: 'Sales', jobs: 29, color: '#8B5CF6' },
   ];
+
+  // Filtering logic
+  const filteredJobs = jobs.filter((job: any) => {
+    // Filter by search query
+    const matchesQuery =
+      job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      job.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      job.skills.some((skill: any) => skill.toLowerCase().includes(searchQuery.toLowerCase()));
+    // Filter by active filter
+    let matchesFilter = true;
+    if (activeFilter === 'urgent') matchesFilter = job.urgency === 'urgent';
+    if (activeFilter === 'remote') matchesFilter = job.location.toLowerCase().includes('remote');
+    if (activeFilter === 'part-time') matchesFilter = job.duration.toLowerCase().includes('part');
+    if (activeFilter === 'full-time') matchesFilter = job.duration.toLowerCase().includes('full');
+    // Filter by category
+    let matchesCategory = true;
+    if (activeCategory) {
+      matchesCategory = job.skills.some((skill: any) =>
+        skill.toLowerCase().includes(activeCategory.toLowerCase()) ||
+        job.title.toLowerCase().includes(activeCategory.toLowerCase())
+      );
+    }
+    return matchesQuery && matchesFilter && matchesCategory;
+  });
+
+  const handleSaveJob = (jobId: string) => {
+    setSavedJobs(prev =>
+      prev.includes(jobId) ? prev.filter(id => id !== jobId) : [...prev, jobId]
+    );
+  };
+
+  const handleApplyJob = (jobId: string) => {
+    alert('Applied to job: ' + jobId);
+  };
+
+  const handleCategoryPress = (categoryName: string) => {
+    setActiveCategory(categoryName === activeCategory ? null : categoryName);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -96,8 +139,12 @@ export default function SearchScreen() {
             {categories.map((category) => (
               <TouchableOpacity
                 key={category.id}
-                style={styles.categoryCard}
+                style={[
+                  styles.categoryCard,
+                  activeCategory === category.name && { borderColor: '#2563EB', borderWidth: 2 }
+                ]}
                 activeOpacity={0.8}
+                onPress={() => handleCategoryPress(category.name)}
               >
                 <View style={[styles.categoryIcon, { backgroundColor: category.color }]} />
                 <Text style={styles.categoryName}>{category.name}</Text>
@@ -105,6 +152,26 @@ export default function SearchScreen() {
               </TouchableOpacity>
             ))}
           </View>
+        </View>
+
+        {/* Job Results */}
+        <View style={{ paddingHorizontal: 20, marginBottom: 32 }}>
+          {filteredJobs.length === 0 ? (
+            <Text style={{ color: '#6B7280', textAlign: 'center', marginTop: 24 }}>
+              No jobs found.
+            </Text>
+          ) : (
+            filteredJobs.map((job: any) => (
+              <JobCard
+                key={job.id}
+                job={job}
+                onPress={() => {}}
+                onSave={handleSaveJob}
+                onApply={handleApplyJob}
+                isSaved={savedJobs.includes(job.id)}
+              />
+            ))
+          )}
         </View>
 
         {/* Recent Searches */}
