@@ -87,7 +87,7 @@ export default function ChatDetail() {
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.replace('/chat')} style={styles.backButton}>
           <Text style={{ color: '#2563EB', fontSize: 18 }}>{'< Back'}</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Chat with {chatName}</Text>
