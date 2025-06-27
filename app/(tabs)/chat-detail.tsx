@@ -74,7 +74,11 @@ export default function ChatDetail() {
   };
 
   const renderItem = ({ item }: { item: Message }) => (
-    <View style={[styles.messageRow, item.sender === 'me' ? styles.myMessage : styles.theirMessage]}>
+    <View style={[
+      styles.messageRow,
+      item.sender === 'me' ? styles.myMessage : styles.theirMessage,
+      item.text === 'Hello! How can I help you?' && styles.greetingMessage
+    ]}>
       {item.text ? <Text style={styles.messageText}>{item.text}</Text> : null}
       {item.image ? <Image source={{ uri: item.image }} style={styles.messageImage} /> : null}
     </View>
@@ -188,5 +192,8 @@ const styles = StyleSheet.create({
   },
   imageButton: {
     padding: 4,
+  },
+  greetingMessage: {
+    backgroundColor: '#899499', // gray
   },
 }); 
