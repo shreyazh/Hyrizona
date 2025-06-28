@@ -3,7 +3,7 @@ name: Build & Deploy Android AAB
 on:
   push:
     tags:
-      - 'v*'  # e.g., v1.0.0 to trigger build
+      - 'v*'  # e.g., v1.0.0 to trigger buil
 
 jobs:
   build:
