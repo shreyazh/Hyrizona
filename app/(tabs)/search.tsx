@@ -139,20 +139,25 @@ export default function SearchScreen() {
     if (activeFilter === 'remote') matchesFilter = job.location.toLowerCase().includes('remote');
     if (activeFilter === 'part-time') matchesFilter = job.duration.toLowerCase().includes('part');
     if (activeFilter === 'full-time') matchesFilter = job.duration.toLowerCase().includes('full');
-    if (activeFilter === 'high-paying') matchesFilter = job.salary >= 80000;
+    if (activeFilter === 'high-paying') {
+      const payValue = parseInt(job.pay.replace(/[^0-9]/g, ''));
+      matchesFilter = payValue >= 30; // $30/hr or more
+    }
 
     let matchesCategory = true;
     if (activeCategory) {
       matchesCategory = job.skills.some((skill: any) =>
         skill.toLowerCase().includes(activeCategory.toLowerCase()) ||
-        job.title.toLowerCase().includes(activeCategory.toLowerCase())
+        job.title.toLowerCase().includes(activeCategory.toLowerCase()) ||
+        job.category.toLowerCase().includes(activeCategory.toLowerCase())
       );
     }
 
     // Advanced filters
-    const matchesSalary = job.salary >= salaryRange.min && job.salary <= salaryRange.max;
+    const payValue = parseInt(job.pay.replace(/[^0-9]/g, ''));
+    const matchesSalary = payValue >= salaryRange.min && payValue <= salaryRange.max;
     const matchesExperience = experienceLevel.length === 0 || 
-      experienceLevel.some(level => job.experience.toLowerCase().includes(level.toLowerCase()));
+      experienceLevel.some(level => job.experience?.toLowerCase().includes(level.toLowerCase()));
     const matchesJobType = jobType.length === 0 || 
       jobType.some(type => job.duration.toLowerCase().includes(type.toLowerCase()));
 
@@ -164,17 +169,19 @@ export default function SearchScreen() {
   const sortedJobs = [...filteredJobs].sort((a, b) => {
     switch (sortBy) {
       case 'salary':
-        return parseInt(b.pay.replace(/[^0-9]/g, '')) - parseInt(a.pay.replace(/[^0-9]/g, ''));
+        const payA = parseInt(a.pay.replace(/[^0-9]/g, ''));
+        const payB = parseInt(b.pay.replace(/[^0-9]/g, ''));
+        return payB - payA;
       case 'date':
-        return new Date(b.postedTime).getTime() - new Date(a.postedTime).getTime();
+        return new Date(a.postedTime).getTime() - new Date(b.postedTime).getTime();
       case 'relevance':
       default:
         return 0;
     }
   });
 
-  // Pagination
-  const jobsPerPage = 10;
+  // Enhanced pagination - show more jobs per page
+  const jobsPerPage = 15; // Increased from 10 to 15
   const displayedJobs = sortedJobs.slice(0, currentPage * jobsPerPage);
 
   // Generate recommendations based on user behavior
@@ -186,7 +193,7 @@ export default function SearchScreen() {
           searchHistory.some(term => term.toLowerCase().includes(skill.toLowerCase()))
         )
       )
-      .slice(0, 3);
+      .slice(0, 5); // Increased from 3 to 5
     setRecommendations(userRecommendations);
   }, [savedJobs, searchHistory]);
 
@@ -277,18 +284,71 @@ export default function SearchScreen() {
 
   const handleApplyJob = async (jobId: string) => {
     setIsLoading(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setIsLoading(false);
-    showToast('success', 'Application submitted successfully!');
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      showToast('success', 'Application submitted successfully!');
+      
+      // Update job analytics
+      setSearchAnalytics(prev => ({
+        ...prev,
+        recentActivity: [
+          { term: 'Application submitted', timestamp: new Date(), results: 1 },
+          ...prev.recentActivity.slice(0, 4)
+        ]
+      }));
+    } catch (error) {
+      showToast('error', 'Application failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleBulkApply = async () => {
+    if (displayedJobs.length === 0) {
+      showToast('info', 'No jobs to apply to');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Simulate bulk application
+      const jobsToApply = displayedJobs.slice(0, 5); // Apply to first 5 jobs
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      showToast('success', `Applied to ${jobsToApply.length} jobs successfully!`);
+      
+      // Update analytics
+      setSearchAnalytics(prev => ({
+        ...prev,
+        recentActivity: [
+          { term: 'Bulk application', timestamp: new Date(), results: jobsToApply.length },
+          ...prev.recentActivity.slice(0, 4)
+        ]
+      }));
+    } catch (error) {
+      showToast('error', 'Bulk application failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleCategoryPress = (categoryName: string) => {
     setActiveCategory(categoryName === activeCategory ? null : categoryName);
+    setCurrentPage(1); // Reset pagination when category changes
+    
+    const categoryJobs = jobs.filter((job: any) => 
+      job.skills.some((skill: any) =>
+        skill.toLowerCase().includes(categoryName.toLowerCase()) ||
+        job.title.toLowerCase().includes(categoryName.toLowerCase()) ||
+        job.category.toLowerCase().includes(categoryName.toLowerCase())
+      )
+    );
+    
     showToast(
       'info',
       activeCategory === categoryName 
-        ? 'Category filter removed' : `Filtered by ${categoryName}`
+        ? 'Category filter removed' : `Found ${categoryJobs.length} jobs in ${categoryName}`
     );
   };
 
@@ -321,7 +381,7 @@ export default function SearchScreen() {
   const handleQuickAction = (actionId: string) => {
     switch (actionId) {
       case '1':
-        showToast('info', 'Applying to all jobs...');
+        handleBulkApply();
         break;
       case '2':
         showToast('success', 'Search saved successfully');
@@ -351,6 +411,23 @@ export default function SearchScreen() {
   const handleViewJob = (job: any) => {
     showToast('info', `Viewing ${job.title} details`);
   };
+
+  // Get category job counts
+  const getCategoryJobCount = (categoryName: string) => {
+    return jobs.filter((job: any) => 
+      job.skills.some((skill: any) =>
+        skill.toLowerCase().includes(categoryName.toLowerCase()) ||
+        job.title.toLowerCase().includes(categoryName.toLowerCase()) ||
+        job.category.toLowerCase().includes(categoryName.toLowerCase())
+      )
+    ).length;
+  };
+
+  // Update categories with real job counts
+  const categoriesWithCounts = categories.map(category => ({
+    ...category,
+    jobs: getCategoryJobCount(category.name)
+  }));
 
   const AdvancedFiltersModal = () => (
     <Modal
@@ -682,7 +759,7 @@ export default function SearchScreen() {
         <View style={styles.categoriesSection}>
           <Text style={styles.sectionTitle}>Browse by Category</Text>
           <View style={styles.categoriesGrid}>
-            {categories.map((category) => (
+            {categoriesWithCounts.map((category) => (
               <TouchableOpacity
                 key={category.id}
                 style={[
@@ -698,10 +775,48 @@ export default function SearchScreen() {
                   <Text style={styles.categoryJobs}>{category.jobs} jobs</Text>
                   <Text style={styles.categoryGrowth}>{category.growth}</Text>
                 </View>
+                {activeCategory === category.name && (
+                  <View style={styles.activeCategoryIndicator}>
+                    <Text style={styles.activeCategoryText}>Active</Text>
+                  </View>
+                )}
               </TouchableOpacity>
             ))}
           </View>
         </View>
+
+        {/* Application Summary */}
+        {savedJobs.length > 0 && (
+          <View style={styles.applicationSummarySection}>
+            <Text style={styles.sectionTitle}>Your Activity</Text>
+            <View style={styles.applicationSummaryCard}>
+              <View style={styles.summaryRow}>
+                <View style={styles.summaryItem}>
+                  <Text style={styles.summaryLabel}>Saved Jobs</Text>
+                  <Text style={styles.summaryValue}>{savedJobs.length}</Text>
+                </View>
+                <View style={styles.summaryItem}>
+                  <Text style={styles.summaryLabel}>Applied Today</Text>
+                  <Text style={styles.summaryValue}>
+                    {searchAnalytics.recentActivity.filter(activity => 
+                      activity.term.includes('Application')
+                    ).length}
+                  </Text>
+                </View>
+                <View style={styles.summaryItem}>
+                  <Text style={styles.summaryLabel}>Total Searches</Text>
+                  <Text style={styles.summaryValue}>{searchAnalytics.totalSearches}</Text>
+                </View>
+              </View>
+              <TouchableOpacity 
+                style={styles.viewSavedButton}
+                onPress={() => showToast('info', 'Viewing saved jobs...')}
+              >
+                <Text style={styles.viewSavedButtonText}>View Saved Jobs</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         {/* Recommendations */}
         {recommendations.length > 0 && (
@@ -763,9 +878,16 @@ export default function SearchScreen() {
         {/* Job Results */}
         <View style={styles.jobsSection}>
           <View style={styles.jobsHeader}>
-            <Text style={styles.sectionTitle}>
-              {displayedJobs.length} Jobs Found
-            </Text>
+            <View style={styles.jobsHeaderLeft}>
+              <Text style={styles.sectionTitle}>
+                {displayedJobs.length} Jobs Found
+              </Text>
+              {sortedJobs.length > displayedJobs.length && (
+                <Text style={styles.jobsSubtitle}>
+                  Showing {displayedJobs.length} of {sortedJobs.length} jobs
+                </Text>
+              )}
+            </View>
             {(activeFilter !== 'all' || activeCategory || searchQuery) && (
               <TouchableOpacity 
                 style={styles.clearFiltersButton}
@@ -780,6 +902,20 @@ export default function SearchScreen() {
               </TouchableOpacity>
             )}
           </View>
+
+          {/* Search Results Summary */}
+          {(activeCategory || searchQuery) && (
+            <View style={styles.searchResultsSummary}>
+              <Text style={styles.summaryText}>
+                {activeCategory && `Category: ${activeCategory}`}
+                {activeCategory && searchQuery && ' • '}
+                {searchQuery && `Search: "${searchQuery}"`}
+              </Text>
+              <Text style={styles.summarySubtext}>
+                {sortedJobs.length} matching jobs found
+              </Text>
+            </View>
+          )}
 
           {displayedJobs.length === 0 ? (
             <View style={styles.emptyState}>
@@ -818,8 +954,23 @@ export default function SearchScreen() {
                   style={styles.loadMoreButton}
                   onPress={handleLoadMore}
                 >
-                  <Text style={styles.loadMoreText}>Load More Jobs</Text>
+                  <Text style={styles.loadMoreText}>
+                    Load More Jobs ({sortedJobs.length - displayedJobs.length} remaining)
+                  </Text>
                 </TouchableOpacity>
+              )}
+
+              {displayedJobs.length === sortedJobs.length && sortedJobs.length > 0 && (
+                <View style={styles.endOfResults}>
+                  <Text style={styles.endOfResultsText}>You've seen all available jobs</Text>
+                  <TouchableOpacity 
+                    style={styles.refreshResultsButton}
+                    onPress={onRefresh}
+                  >
+                    <RotateCcw size={16} color="#2563EB" />
+                    <Text style={styles.refreshResultsText}>Refresh Results</Text>
+                  </TouchableOpacity>
+                </View>
               )}
             </>
           )}
@@ -1248,6 +1399,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
+  jobsHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  jobsSubtitle: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: '#6B7280',
+  },
   clearFiltersButton: {
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -1258,6 +1419,24 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: 'Inter-Medium',
     color: '#EF4444',
+  },
+  searchResultsSummary: {
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginBottom: 24,
+  },
+  summaryText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
+    color: '#6B7280',
+  },
+  summarySubtext: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+    color: '#9CA3AF',
   },
   emptyState: {
     alignItems: 'center',
@@ -1503,5 +1682,89 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
     color: 'white',
+  },
+  applicationSummarySection: {
+    paddingHorizontal: 20,
+    marginBottom: 32,
+  },
+  applicationSummaryCard: {
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  summaryItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  summaryLabel: {
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
+    color: '#6B7280',
+  },
+  summaryValue: {
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+    color: '#111827',
+  },
+  viewSavedButton: {
+    backgroundColor: '#2563EB',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  viewSavedButtonText: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    color: 'white',
+  },
+  activeCategoryIndicator: {
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  activeCategoryText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+    color: 'white',
+  },
+  endOfResults: {
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  endOfResultsText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
+    color: '#6B7280',
+    marginBottom: 16,
+  },
+  refreshResultsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 8,
+  },
+  refreshResultsText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
+    color: '#2563EB',
   },
 });
