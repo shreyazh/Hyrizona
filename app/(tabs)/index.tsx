@@ -55,6 +55,7 @@ export interface Job {
   benefits?: string[];
 }
 
+// Extended mock jobs with more variety
 export const mockJobs: Job[] = [
   {
     id: '1',
@@ -145,6 +146,133 @@ export const mockJobs: Job[] = [
     description: 'Manage social media presence and create engaging content.',
     requirements: ['Social media experience', 'Creative mindset', 'Analytics skills'],
     benefits: ['Flexible schedule', 'Creative control', 'Performance bonuses']
+  },
+  // Additional jobs for load more functionality
+  {
+    id: '6',
+    title: 'Mobile App Developer',
+    company: 'AppWorks Studio',
+    location: 'Innovation Hub, 4.2 km',
+    pay: '$40/hr',
+    duration: '3-6 weeks',
+    skills: ['React Native', 'iOS', 'Android'],
+    postedTime: '6 hours ago',
+    urgency: 'urgent',
+    rating: 4.9,
+    applicants: 7,
+    verified: true,
+    category: 'Technology',
+    description: 'Develop cross-platform mobile applications using React Native.',
+    requirements: ['2+ years React Native', 'App Store experience', 'UI/UX skills'],
+    benefits: ['Remote work', 'Latest devices', 'App store revenue share']
+  },
+  {
+    id: '7',
+    title: 'Video Editor',
+    company: 'Creative Media Lab',
+    location: 'Arts District, 2.8 km',
+    pay: '$28/hr',
+    duration: '1-3 weeks',
+    skills: ['Premiere Pro', 'After Effects', 'Motion Graphics'],
+    postedTime: '8 hours ago',
+    urgency: 'normal',
+    rating: 4.4,
+    applicants: 9,
+    verified: true,
+    category: 'Design',
+    description: 'Create compelling video content for social media and marketing campaigns.',
+    requirements: ['Video editing experience', 'Adobe Creative Suite', 'Portfolio'],
+    benefits: ['Creative freedom', 'Equipment provided', 'Flexible deadlines']
+  },
+  {
+    id: '8',
+    title: 'Data Analyst',
+    company: 'Analytics Corp',
+    location: 'Financial District, 3.1 km',
+    pay: '$32/hr',
+    duration: '2-4 weeks',
+    skills: ['Excel', 'SQL', 'Python'],
+    postedTime: '10 hours ago',
+    urgency: 'normal',
+    rating: 4.6,
+    applicants: 11,
+    verified: true,
+    category: 'Technology',
+    description: 'Analyze data and create insights for business decision making.',
+    requirements: ['Data analysis experience', 'SQL knowledge', 'Statistical skills'],
+    benefits: ['Professional development', 'Remote option', 'Competitive pay']
+  },
+  {
+    id: '9',
+    title: 'Customer Service Representative',
+    company: 'Support Solutions',
+    location: 'Downtown, 1.5 km',
+    pay: '$16/hr',
+    duration: 'Ongoing',
+    skills: ['Communication', 'Problem Solving', 'Patience'],
+    postedTime: '12 hours ago',
+    urgency: 'urgent',
+    rating: 4.3,
+    applicants: 18,
+    verified: false,
+    category: 'Events',
+    description: 'Provide excellent customer support through phone and email.',
+    requirements: ['Customer service experience', 'Good communication', 'Computer skills'],
+    benefits: ['Health benefits', 'Paid training', 'Career advancement']
+  },
+  {
+    id: '10',
+    title: 'SEO Specialist',
+    company: 'Digital Growth Agency',
+    location: 'Remote/Anywhere',
+    pay: '$26/hr',
+    duration: '1-2 months',
+    skills: ['SEO', 'Google Analytics', 'Content Strategy'],
+    postedTime: '1 day ago',
+    urgency: 'normal',
+    rating: 4.7,
+    applicants: 6,
+    verified: true,
+    category: 'Marketing',
+    description: 'Optimize websites for search engines and improve organic traffic.',
+    requirements: ['SEO experience', 'Google Analytics', 'Content knowledge'],
+    benefits: ['Remote work', 'Flexible hours', 'Performance bonuses']
+  },
+  {
+    id: '11',
+    title: 'UI/UX Designer',
+    company: 'Design Studio Pro',
+    location: 'Creative Quarter, 2.3 km',
+    pay: '$30/hr',
+    duration: '2-5 weeks',
+    skills: ['Figma', 'User Research', 'Prototyping'],
+    postedTime: '1 day ago',
+    urgency: 'normal',
+    rating: 4.8,
+    applicants: 4,
+    verified: true,
+    category: 'Design',
+    description: 'Design user interfaces and create exceptional user experiences.',
+    requirements: ['UI/UX experience', 'Figma/Sketch', 'Portfolio'],
+    benefits: ['Creative environment', 'Latest tools', 'Professional growth']
+  },
+  {
+    id: '12',
+    title: 'Copywriter',
+    company: 'Wordsmith Agency',
+    location: 'Remote/Anywhere',
+    pay: '$24/hr',
+    duration: '1-3 weeks',
+    skills: ['Copywriting', 'Brand Voice', 'Marketing'],
+    postedTime: '2 days ago',
+    urgency: 'normal',
+    rating: 4.5,
+    applicants: 13,
+    verified: true,
+    category: 'Writing',
+    description: 'Create compelling copy for websites, ads, and marketing materials.',
+    requirements: ['Copywriting experience', 'Portfolio', 'Marketing knowledge'],
+    benefits: ['Remote work', 'Creative freedom', 'Diverse projects']
   }
 ];
 
@@ -173,23 +301,36 @@ export default function HomeScreen() {
   const { showSuccess, showError, showInfo } = useToastContext();
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [savedJobs, setSavedJobs] = useState<string[]>([]);
+  const [allJobs, setAllJobs] = useState<Job[]>(mockJobs);
+  const [displayedJobs, setDisplayedJobs] = useState<Job[]>(mockJobs.slice(0, 5));
   const [filteredJobs, setFilteredJobs] = useState<Job[]>(mockJobs);
   const [showSearch, setShowSearch] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [userLocation, setUserLocation] = useState('Ontario, CA');
   const [currentFilters, setCurrentFilters] = useState<FilterOptions>(defaultFilters);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMoreJobs, setHasMoreJobs] = useState(true);
+  const jobsPerPage = 5;
   const [stats, setStats] = useState({
     nearbyJobs: 24,
     activeHirers: 156,
     totalEarnings: 0
   });
 
+  // Initialize displayed jobs
+  useEffect(() => {
+    const initialJobs = allJobs.slice(0, jobsPerPage);
+    setDisplayedJobs(initialJobs);
+    setFilteredJobs(initialJobs);
+  }, []);
+
   // Filter jobs based on search, category, and advanced filters
   const filterJobs = useCallback(() => {
-    let filtered = mockJobs;
+    let filtered = allJobs;
 
     // Filter by category
     if (selectedCategory !== 'all') {
@@ -232,7 +373,13 @@ export default function HomeScreen() {
     });
 
     setFilteredJobs(filtered);
-  }, [searchQuery, selectedCategory, currentFilters]);
+    
+    // Reset pagination when filters change
+    setCurrentPage(1);
+    const initialFilteredJobs = filtered.slice(0, jobsPerPage);
+    setDisplayedJobs(initialFilteredJobs);
+    setHasMoreJobs(filtered.length > jobsPerPage);
+  }, [searchQuery, selectedCategory, currentFilters, allJobs]);
 
   useEffect(() => {
     filterJobs();
@@ -254,6 +401,35 @@ export default function HomeScreen() {
       showError('Refresh Failed', 'Failed to refresh job listings');
     } finally {
       setRefreshing(false);
+    }
+  };
+
+  const handleLoadMore = async () => {
+    if (loadingMore || !hasMoreJobs) return;
+
+    setLoadingMore(true);
+    try {
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const nextPage = currentPage + 1;
+      const startIndex = (nextPage - 1) * jobsPerPage;
+      const endIndex = startIndex + jobsPerPage;
+      const newJobs = filteredJobs.slice(startIndex, endIndex);
+      
+      if (newJobs.length > 0) {
+        setDisplayedJobs(prev => [...prev, ...newJobs]);
+        setCurrentPage(nextPage);
+        setHasMoreJobs(endIndex < filteredJobs.length);
+        showSuccess('More Jobs Loaded!', `Loaded ${newJobs.length} more jobs`);
+      } else {
+        setHasMoreJobs(false);
+        showInfo('No More Jobs', 'You\'ve reached the end of available jobs');
+      }
+    } catch (error) {
+      showError('Load Failed', 'Failed to load more jobs');
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -490,7 +666,7 @@ export default function HomeScreen() {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>
               {selectedCategory === 'all' ? 'Jobs Near You' : `${categories.find(c => c.id === selectedCategory)?.name} Jobs`}
-              {filteredJobs.length > 0 && ` (${filteredJobs.length})`}
+              {displayedJobs.length > 0 && ` (${displayedJobs.length} of ${filteredJobs.length})`}
             </Text>
             <TouchableOpacity>
               <Text style={styles.seeAllText}>See All</Text>
@@ -504,7 +680,7 @@ export default function HomeScreen() {
             </View>
           )}
           
-          {filteredJobs.length === 0 ? (
+          {displayedJobs.length === 0 ? (
             <View style={styles.emptyState}>
               <Text style={styles.emptyStateTitle}>No jobs found</Text>
               <Text style={styles.emptyStateText}>
@@ -513,7 +689,7 @@ export default function HomeScreen() {
             </View>
           ) : (
             <View style={styles.jobsList}>
-              {filteredJobs.map((job) => (
+              {displayedJobs.map((job) => (
                 <JobCard
                   key={job.id}
                   job={job}
@@ -528,10 +704,28 @@ export default function HomeScreen() {
         </View>
 
         {/* Load More */}
-        {filteredJobs.length > 0 && (
-          <TouchableOpacity style={styles.loadMoreButton}>
-            <Text style={styles.loadMoreText}>Load More Jobs</Text>
+        {hasMoreJobs && displayedJobs.length > 0 && (
+          <TouchableOpacity 
+            style={styles.loadMoreButton}
+            onPress={handleLoadMore}
+            disabled={loadingMore}
+          >
+            {loadingMore ? (
+              <View style={styles.loadMoreContent}>
+                <ActivityIndicator size="small" color="#2563EB" />
+                <Text style={styles.loadMoreText}>Loading...</Text>
+              </View>
+            ) : (
+              <Text style={styles.loadMoreText}>Load More Jobs</Text>
+            )}
           </TouchableOpacity>
+        )}
+
+        {/* No More Jobs Indicator */}
+        {!hasMoreJobs && displayedJobs.length > 0 && (
+          <View style={styles.noMoreJobsContainer}>
+            <Text style={styles.noMoreJobsText}>You've reached the end of available jobs</Text>
+          </View>
         )}
       </ScrollView>
 
@@ -762,9 +956,25 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
+  loadMoreContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   loadMoreText: {
     fontSize: 16,
     fontFamily: 'Inter-Medium',
     color: '#2563EB',
+  },
+  noMoreJobsContainer: {
+    margin: 20,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  noMoreJobsText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: '#9CA3AF',
+    fontStyle: 'italic',
   },
 });
