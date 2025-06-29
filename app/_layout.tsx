@@ -12,6 +12,7 @@ import {
 import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { UserProvider } from '../contexts/UserContext';
+import { ToastProvider } from '../contexts/ToastContext';
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
@@ -38,16 +39,19 @@ export default function RootLayout() {
 
   return (
     <UserProvider>
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="onboarding" />
-        <Stack.Screen name="auth" />
-        <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="settings-screens" />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style="auto" />
-    </GestureHandlerRootView>
+      <ToastProvider>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="onboarding" />
+            <Stack.Screen name="auth" />
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="settings-screens" />
+            <Stack.Screen name="+not-found" />
+            <Stack.Screen name="job-details" />
+          </Stack>
+          <StatusBar style="auto" />
+        </GestureHandlerRootView>
+      </ToastProvider>
     </UserProvider>
   );
 }
