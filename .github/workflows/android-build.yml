@@ -20,23 +20,20 @@ jobs:
       - name: Install EAS CLI
         run: npm install -g eas-cli
 
-      - name: Authenticate with Expo
-        run: eas whoami || eas login --token ${{ secrets.EAS_ACCESS_TOKEN }}
-
       - name: Install dependencies
         run: npm install
 
       - name: Build Android AAB
-        run: eas build --platform android --profile production --non-interactive
+        run: eas build --platform android --profile production --non-interactive --token ${{ secrets.EAS_ACCESS_TOKEN }}
 
       - name: Download AAB
         run: |
           mkdir aab_output
-          eas build:inspect --platform android --json > build-info.json
+          eas build:inspect --platform android --token ${{ secrets.EAS_ACCESS_TOKEN }} --json > build-info.json
           BUILD_URL=$(cat build-info.json | jq -r '.[0].artifacts.buildUrl')
           curl -o aab_output/app.aab "$BUILD_URL"
 
-      # Optional: Upload to Google Play
+      # Optional: Upload AAB to Google Play
       - name: Upload AAB to Google Play
         uses: r0adkll/upload-google-play@v1
         with:
