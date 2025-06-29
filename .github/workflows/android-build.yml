@@ -27,11 +27,11 @@ jobs:
         run: npm install
  
       - name: Build Android AAB and download
-       run: |
-        BUILD_INFO=$(eas build --platform android --profile production --non-interactive --wait --json)
-        BUILD_URL=$(echo "$BUILD_INFO" | jq -r '.artifacts.buildUrl')
-        mkdir -p aab_output
-        curl -o aab_output/app.aab "$BUILD_URL"
+  run: |
+    BUILD_INFO=$(eas build --platform android --profile production --non-interactive --wait --json)
+    BUILD_URL=$(echo "$BUILD_INFO" | jq -r '.artifacts.buildUrl')
+    mkdir -p aab_output
+    curl -o aab_output/app.aab "$BUILD_URL"
 
 
       - name: Upload AAB to Google Play
