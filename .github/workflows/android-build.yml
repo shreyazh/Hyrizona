@@ -29,10 +29,10 @@ jobs:
       - name: Build Android AAB and Wait
         run: |
           eas build --platform android --profile production --non-interactive --wait
-          BUILD_URL=$(eas build:list --platform android --status finished --limit 1 --json | jq -r '.[0].artifacts.buildUrl')
+          BUILD_URL="https://expo.dev/artifacts/eas/67r7KfoZJQPLJ3MjQpQ3ZG.aab"
           mkdir -p aab_output
           curl -o aab_output/app.aab "$BUILD_URL"
- 
+
       - name: Upload AAB to Google Play
         uses: r0adkll/upload-google-play@v1
         with:
