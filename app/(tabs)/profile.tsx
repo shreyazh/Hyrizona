@@ -56,7 +56,17 @@ export default function ProfileScreen() {
   };
 
   const handleEditProfile = () => {
-    router.push('/settings-screens/edit-profile');
+    try {
+      console.log('=== EDIT PROFILE DEBUG ===');
+      console.log('User:', user);
+      console.log('Router:', router);
+      console.log('Attempting navigation to /edit-profile...');
+      router.push('/edit-profile');
+      console.log('Navigation command sent successfully');
+    } catch (error) {
+      console.error('Navigation error:', error);
+      Alert.alert('Error', 'Failed to open edit profile. Please try again.');
+    }
   };
 
   const handleModeSwitch = () => {
@@ -106,6 +116,14 @@ export default function ProfileScreen() {
 
   const renderSeekerProfile = () => (
     <>
+      {/* Job Role */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Job Role</Text>
+        <Text style={styles.jobRoleText}>
+          {user?.jobRole || 'No job role specified'}
+        </Text>
+      </View>
+
       {/* Skills */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Skills</Text>
@@ -153,6 +171,30 @@ export default function ProfileScreen() {
 
   const renderPosterProfile = () => (
     <>
+      {/* Job Role */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Job Role</Text>
+        <Text style={styles.jobRoleText}>
+          {user?.jobRole || 'No job role specified'}
+        </Text>
+      </View>
+
+      {/* Skills */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Skills</Text>
+        <View style={styles.skillsContainer}>
+          {user?.skills && user.skills.length > 0 ? (
+            user.skills.map((skill, index) => (
+            <View key={index} style={styles.skillTag}>
+              <Text style={styles.skillText}>{skill}</Text>
+            </View>
+            ))
+          ) : (
+            <Text style={styles.noSkillsText}>No skills added yet</Text>
+          )}
+        </View>
+      </View>
+
       {/* Company Info */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Company Details</Text>
@@ -596,5 +638,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Inter-Regular',
     color: '#374151',
+  },
+  jobRoleText: {
+    fontSize: 15,
+    fontFamily: 'Inter-Regular',
+    color: '#374151',
+    lineHeight: 22,
   },
 });

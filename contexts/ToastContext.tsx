@@ -1,7 +1,7 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 import { View } from 'react-native';
-import Toast from '@/components/Toast';
-import { useToast, ToastMessage } from '@/hooks/useToast';
+import Toast from '../components/Toast';
+import { useToast, ToastMessage } from '../hooks/useToast';
 
 interface ToastContextType {
   showToast: (

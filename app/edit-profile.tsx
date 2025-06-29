@@ -8,35 +8,36 @@ import {
   ScrollView,
   Alert,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  Image
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, User, Mail, MapPin, Save, Camera, Briefcase, Search } from 'lucide-react-native';
-import { useUser } from '../../contexts/UserContext';
-import { isValidName, isValidEmail } from '../../utils/validation';
-import { Toast } from '../../components/Toast';
-import { SkillsManager } from '../../components/SkillsManager';
+import * as ImagePicker from 'expo-image-picker';
+import { ArrowLeft, User, Mail, MapPin, Save, Camera, Briefcase, Search, Plus, X } from 'lucide-react-native';
+import { useUser } from '../contexts/UserContext';
+import { isValidName, isValidEmail } from '../utils/validation';
 
 export default function EditProfileScreen() {
+  console.log('=== EDIT PROFILE COMPONENT LOADED ===');
   const router = useRouter();
   const { user, updateUser } = useUser();
+  console.log('User context loaded:', user);
+  
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
     location: '',
     userType: 'seeker' as 'seeker' | 'poster',
-    skills: [] as string[]
+    skills: [] as string[],
+    profilePhoto: '',
+    jobRole: ''
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
-  const [toast, setToast] = useState({
-    visible: false,
-    message: '',
-    type: 'success' as 'success' | 'error'
-  });
+  const [newSkill, setNewSkill] = useState('');
 
   useEffect(() => {
     if (user) {
@@ -46,7 +47,9 @@ export default function EditProfileScreen() {
         email: user.email,
         location: user.location || '',
         userType: user.userType,
-        skills: user.skills || []
+        skills: user.skills || [],
+        profilePhoto: user.profilePhoto || '',
+        jobRole: user.jobRole || ''
       });
     }
   }, [user]);
@@ -72,16 +75,12 @@ export default function EditProfileScreen() {
       newErrors.email = 'Please enter a valid email address';
     }
 
+    if (!formData.jobRole.trim()) {
+      newErrors.jobRole = 'Job role is required';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
-
-  const showToast = (message: string, type: 'success' | 'error') => {
-    setToast({ visible: true, message, type });
-  };
-
-  const hideToast = () => {
-    setToast(prev => ({ ...prev, visible: false }));
   };
 
   const handleSave = async () => {
@@ -98,17 +97,15 @@ export default function EditProfileScreen() {
         email: formData.email.trim(),
         location: formData.location.trim() || undefined,
         userType: formData.userType,
-        skills: formData.skills
+        skills: formData.skills,
+        profilePhoto: formData.profilePhoto,
+        jobRole: formData.jobRole.trim()
       });
 
-      showToast('Profile updated successfully!', 'success');
-      
-      // Navigate back after a short delay to show the toast
-      setTimeout(() => {
-        router.back();
-      }, 1500);
+      Alert.alert('Success', 'Profile updated successfully!');
+      router.back();
     } catch (error) {
-      showToast('Failed to update profile. Please try again.', 'error');
+      Alert.alert('Error', 'Failed to update profile. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -116,7 +113,6 @@ export default function EditProfileScreen() {
 
   const updateFormData = (field: string, value: string | string[]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
@@ -127,12 +123,64 @@ export default function EditProfileScreen() {
     errors[field] && styles.inputError
   ];
 
-  const handleChangePhoto = () => {
-    Alert.alert('Change Photo', 'Photo upload feature coming soon!');
+  const handleChangePhoto = async () => {
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (permissionResult.granted === false) {
+        Alert.alert('Permission Required', 'Please allow access to your photo library to change your profile photo.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        updateFormData('profilePhoto', result.assets[0].uri);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to pick image. Please try again.');
+    }
   };
 
-  const handleSkillsChange = (skills: string[]) => {
-    updateFormData('skills', skills);
+  const addSkill = () => {
+    const skill = newSkill.trim();
+    if (skill && skill.length >= 2) {
+      if (formData.skills.includes(skill)) {
+        Alert.alert('Duplicate Skill', 'This skill is already added.');
+        return;
+      }
+      if (formData.skills.length >= 10) {
+        Alert.alert('Maximum Skills', 'You can only add up to 10 skills.');
+        return;
+      }
+      updateFormData('skills', [...formData.skills, skill]);
+      setNewSkill('');
+    }
+  };
+
+  const removeSkill = (skillToRemove: string) => {
+    updateFormData('skills', formData.skills.filter(skill => skill !== skillToRemove));
+  };
+
+  const getUserInitials = () => {
+    return `${formData.firstName.charAt(0)}${formData.lastName.charAt(0)}`.toUpperCase();
+  };
+
+  const getUserAvatar = () => {
+    if (formData.profilePhoto) {
+      return (
+        <Image
+          source={{ uri: formData.profilePhoto }}
+          style={styles.avatarImage}
+        />
+      );
+    }
+    return <Text style={styles.avatarText}>{getUserInitials()}</Text>;
   };
 
   if (!user) {
@@ -179,9 +227,7 @@ export default function EditProfileScreen() {
           <View style={styles.photoSection}>
             <View style={styles.avatarContainer}>
               <View style={styles.avatar}>
-                <Text style={styles.avatarText}>
-                  {`${formData.firstName.charAt(0)}${formData.lastName.charAt(0)}`.toUpperCase()}
-                </Text>
+                {getUserAvatar()}
               </View>
               <TouchableOpacity 
                 style={styles.changePhotoButton}
@@ -260,6 +306,23 @@ export default function EditProfileScreen() {
               </View>
             </View>
 
+            {/* Job Role */}
+            <View style={styles.inputContainer}>
+              <View style={styles.inputWrapper}>
+                <Briefcase size={20} color="#6B7280" style={styles.inputIcon} />
+                <TextInput
+                  style={getInputStyle('jobRole')}
+                  placeholder="Job Role (e.g., React Native Developer)"
+                  value={formData.jobRole}
+                  onChangeText={(value) => updateFormData('jobRole', value)}
+                  autoCapitalize="words"
+                />
+              </View>
+              {errors.jobRole && (
+                <Text style={styles.errorText}>{errors.jobRole}</Text>
+              )}
+            </View>
+
             {/* User Type Selection */}
             <View style={styles.inputContainer}>
               <Text style={styles.sectionLabel}>Account Type</Text>
@@ -305,12 +368,48 @@ export default function EditProfileScreen() {
                 Add your professional skills (max 10)
               </Text>
               
-              <SkillsManager
-                skills={formData.skills}
-                onSkillsChange={handleSkillsChange}
-                maxSkills={10}
-                placeholder="Add a skill..."
-              />
+              {/* Add Skill Input */}
+              <View style={styles.addSkillContainer}>
+                <View style={styles.skillInputWrapper}>
+                  <TextInput
+                    style={styles.skillInput}
+                    placeholder="Add a skill..."
+                    value={newSkill}
+                    onChangeText={setNewSkill}
+                    onSubmitEditing={addSkill}
+                    returnKeyType="done"
+                    autoCapitalize="words"
+                  />
+                  <TouchableOpacity 
+                    style={styles.addSkillButton}
+                    onPress={addSkill}
+                  >
+                    <Plus size={20} color="white" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Skills List */}
+              {formData.skills.length > 0 && (
+                <View style={styles.skillsContainer}>
+                  {formData.skills.map((skill, index) => (
+                    <View key={index} style={styles.skillTag}>
+                      <Text style={styles.skillText}>{skill}</Text>
+                      <TouchableOpacity 
+                        style={styles.removeSkillButton}
+                        onPress={() => removeSkill(skill)}
+                      >
+                        <X size={14} color="#EF4444" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {/* Skills Count */}
+              <Text style={styles.skillsCount}>
+                {formData.skills.length}/10 skills
+              </Text>
             </View>
 
             {/* Save Button */}
@@ -331,14 +430,6 @@ export default function EditProfileScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-
-      {/* Toast */}
-      <Toast
-        visible={toast.visible}
-        message={toast.message}
-        type={toast.type}
-        onHide={hideToast}
-      />
     </SafeAreaView>
   );
 }
@@ -381,51 +472,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  photoSection: {
-    alignItems: 'center',
-    paddingVertical: 24,
-    backgroundColor: 'white',
-    marginHorizontal: 20,
-    marginTop: 20,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  avatarContainer: {
-    position: 'relative',
-    marginBottom: 12,
-  },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#2563EB',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarText: {
-    fontSize: 28,
-    fontFamily: 'Inter-Bold',
-    color: 'white',
-  },
-  changePhotoButton: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#2563EB',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 3,
-    borderColor: 'white',
-  },
-  changePhotoText: {
-    fontSize: 14,
-    fontFamily: 'Inter-Medium',
-    color: '#6B7280',
   },
   form: {
     paddingHorizontal: 20,
@@ -483,11 +529,59 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-SemiBold',
     color: 'white',
   },
-  sectionLabel: {
+  photoSection: {
+    padding: 20,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  avatarContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#E5E7EB',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  changePhotoButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  changePhotoText: {
+    marginTop: 12,
     fontSize: 16,
+    fontFamily: 'Inter-Regular',
+    color: '#6B7280',
+    textAlign: 'center',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 50,
+  },
+  avatarText: {
+    fontSize: 40,
+    fontFamily: 'Inter-SemiBold',
+    color: '#6B7280',
+  },
+  sectionLabel: {
+    fontSize: 18,
     fontFamily: 'Inter-SemiBold',
     color: '#111827',
-    marginBottom: 8,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: '#6B7280',
   },
   userTypeContainer: {
     flexDirection: 'row',
@@ -495,33 +589,75 @@ const styles = StyleSheet.create({
   },
   userTypeButton: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
+    padding: 12,
     borderWidth: 1,
     borderColor: '#E5E7EB',
     borderRadius: 12,
-    backgroundColor: 'white',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   activeUserTypeButton: {
     borderColor: '#2563EB',
-    backgroundColor: '#EFF6FF',
   },
   userTypeText: {
-    fontSize: 14,
-    fontFamily: 'Inter-Medium',
-    color: '#6B7280',
-    marginLeft: 8,
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    color: '#111827',
   },
   activeUserTypeText: {
-    fontFamily: 'Inter-SemiBold',
     color: '#2563EB',
   },
-  sectionSubtitle: {
-    fontSize: 14,
-    fontFamily: 'Inter-Medium',
-    color: '#6B7280',
+  addSkillContainer: {
+    marginBottom: 20,
+  },
+  skillInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    paddingHorizontal: 16,
+  },
+  skillInput: {
+    flex: 1,
+    paddingVertical: 16,
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+    color: '#111827',
+  },
+  addSkillButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  skillsContainer: {
+    marginBottom: 20,
+  },
+  skillTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E5E7EB',
+    borderRadius: 12,
+    padding: 8,
     marginBottom: 8,
+  },
+  skillText: {
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+    color: '#111827',
+  },
+  removeSkillButton: {
+    width: 20,
+    height: 20,
+    marginLeft: 8,
+  },
+  skillsCount: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: '#6B7280',
   },
 }); 

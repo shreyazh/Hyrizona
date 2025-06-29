@@ -16,6 +16,7 @@ export interface User {
   profilePhoto?: string;
   idProof?: string;
   phone?: string;
+  jobRole?: string;
 }
 
 interface UserContextType {
