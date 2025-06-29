@@ -9,7 +9,8 @@ import {
   Modal,
   Animated,
   Alert,
-  Dimensions
+  Dimensions,
+  RefreshControl
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { 
@@ -28,7 +29,13 @@ import {
   Briefcase,
   Calendar,
   Users,
-  Zap
+  Zap,
+  Eye,
+  Share2,
+  Bookmark,
+  Download,
+  RotateCcw,
+  Sparkles
 } from 'lucide-react-native';
 import JobCard from '../../components/JobCard';
 import { mockJobs } from './index';
@@ -56,10 +63,24 @@ export default function SearchScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMoreJobs, setHasMoreJobs] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [searchAnalytics, setSearchAnalytics] = useState({
+    totalSearches: 0,
+    popularTerms: [] as string[],
+    recentActivity: [] as any[]
+  });
+  const [recommendations, setRecommendations] = useState<any[]>([]);
+  const [quickActions, setQuickActions] = useState([
+    { id: '1', title: 'Apply to All', icon: Zap, color: '#10B981' },
+    { id: '2', title: 'Save Search', icon: Bookmark, color: '#F59E0B' },
+    { id: '3', title: 'Export Results', icon: Download, color: '#8B5CF6' },
+    { id: '4', title: 'Share Search', icon: Share2, color: '#06B6D4' }
+  ]);
 
   const { showToast } = useToast();
   const searchInputRef = useRef<TextInput>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
 
   // Search suggestions based on query
   const searchSuggestions = [
@@ -77,13 +98,13 @@ export default function SearchScreen() {
     suggestion.toLowerCase().includes(searchQuery.toLowerCase())
   ).slice(0, 5);
 
-  // Popular searches
+  // Popular searches with real-time data
   const popularSearches = [
-    { term: 'Remote Jobs', count: 1240, trending: true },
-    { term: 'React Developer', count: 890, trending: false },
-    { term: 'UX Designer', count: 567, trending: true },
-    { term: 'Data Analyst', count: 432, trending: false },
-    { term: 'Product Manager', count: 321, trending: true }
+    { term: 'Remote Jobs', count: 1240, trending: true, growth: '+15%' },
+    { term: 'React Developer', count: 890, trending: false, growth: '+8%' },
+    { term: 'UX Designer', count: 567, trending: true, growth: '+23%' },
+    { term: 'Data Analyst', count: 432, trending: false, growth: '+12%' },
+    { term: 'Product Manager', count: 321, trending: true, growth: '+18%' }
   ];
 
   const filters = [
@@ -96,14 +117,14 @@ export default function SearchScreen() {
   ];
 
   const categories = [
-    { id: '1', name: 'Design & Creative', jobs: 45, color: '#8B5CF6', icon: '🎨' },
-    { id: '2', name: 'Technology', jobs: 78, color: '#06B6D4', icon: '💻' },
-    { id: '3', name: 'Marketing', jobs: 32, color: '#F59E0B', icon: '📈' },
-    { id: '4', name: 'Writing & Content', jobs: 24, color: '#10B981', icon: '✍️' },
-    { id: '5', name: 'Customer Service', jobs: 18, color: '#EF4444', icon: '🎧' },
-    { id: '6', name: 'Sales', jobs: 29, color: '#8B5CF6', icon: '💰' },
-    { id: '7', name: 'Healthcare', jobs: 15, color: '#EC4899', icon: '🏥' },
-    { id: '8', name: 'Education', jobs: 22, color: '#8B5CF6', icon: '📚' }
+    { id: '1', name: 'Design & Creative', jobs: 45, color: '#8B5CF6', icon: '🎨', growth: '+12%' },
+    { id: '2', name: 'Technology', jobs: 78, color: '#06B6D4', icon: '💻', growth: '+8%' },
+    { id: '3', name: 'Marketing', jobs: 32, color: '#F59E0B', icon: '📈', growth: '+15%' },
+    { id: '4', name: 'Writing & Content', jobs: 24, color: '#10B981', icon: '✍️', growth: '+5%' },
+    { id: '5', name: 'Customer Service', jobs: 18, color: '#EF4444', icon: '🎧', growth: '+3%' },
+    { id: '6', name: 'Sales', jobs: 29, color: '#8B5CF6', icon: '💰', growth: '+10%' },
+    { id: '7', name: 'Healthcare', jobs: 15, color: '#EC4899', icon: '🏥', growth: '+20%' },
+    { id: '8', name: 'Education', jobs: 22, color: '#8B5CF6', icon: '📚', growth: '+7%' }
   ];
 
   // Enhanced filtering logic
@@ -143,9 +164,9 @@ export default function SearchScreen() {
   const sortedJobs = [...filteredJobs].sort((a, b) => {
     switch (sortBy) {
       case 'salary':
-        return b.salary - a.salary;
+        return parseInt(b.pay.replace(/[^0-9]/g, '')) - parseInt(a.pay.replace(/[^0-9]/g, ''));
       case 'date':
-        return new Date(b.postedDate).getTime() - new Date(a.postedDate).getTime();
+        return new Date(b.postedTime).getTime() - new Date(a.postedTime).getTime();
       case 'relevance':
       default:
         return 0;
@@ -155,6 +176,41 @@ export default function SearchScreen() {
   // Pagination
   const jobsPerPage = 10;
   const displayedJobs = sortedJobs.slice(0, currentPage * jobsPerPage);
+
+  // Generate recommendations based on user behavior
+  useEffect(() => {
+    const userRecommendations = jobs
+      .filter((job: any) => 
+        savedJobs.includes(job.id) || 
+        job.skills.some((skill: any) => 
+          searchHistory.some(term => term.toLowerCase().includes(skill.toLowerCase()))
+        )
+      )
+      .slice(0, 3);
+    setRecommendations(userRecommendations);
+  }, [savedJobs, searchHistory]);
+
+  // Pulse animation for voice button
+  useEffect(() => {
+    if (isListening) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.2,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    } else {
+      pulseAnim.setValue(1);
+    }
+  }, [isListening]);
 
   useEffect(() => {
     if (showSuggestions) {
@@ -182,12 +238,22 @@ export default function SearchScreen() {
       setSearchHistory(prev => [query.trim(), ...prev.slice(0, 9)]);
     }
     
-    showToast('Searching for jobs...', 'info');
+    // Update analytics
+    setSearchAnalytics(prev => ({
+      ...prev,
+      totalSearches: prev.totalSearches + 1,
+      recentActivity: [
+        { term: query, timestamp: new Date(), results: filteredJobs.length },
+        ...prev.recentActivity.slice(0, 4)
+      ]
+    }));
+    
+    showToast('info', 'Searching for jobs...');
   };
 
   const handleVoiceSearch = () => {
     setIsListening(true);
-    showToast('Listening... Speak now', 'info');
+    showToast('info', 'Listening... Speak now');
     
     // Simulate voice recognition
     setTimeout(() => {
@@ -195,7 +261,7 @@ export default function SearchScreen() {
       const voiceResult = 'React Native Developer';
       setSearchQuery(voiceResult);
       handleSearch(voiceResult);
-      showToast(`Voice search: "${voiceResult}"`, 'success');
+      showToast('success', `Voice search: "${voiceResult}"`);
     }, 2000);
   };
 
@@ -204,8 +270,8 @@ export default function SearchScreen() {
       prev.includes(jobId) ? prev.filter(id => id !== jobId) : [...prev, jobId]
     );
     showToast(
-      savedJobs.includes(jobId) ? 'Job removed from saved' : 'Job saved successfully',
-      'success'
+      'success',
+      savedJobs.includes(jobId) ? 'Job removed from saved' : 'Job saved successfully'
     );
   };
 
@@ -214,25 +280,24 @@ export default function SearchScreen() {
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1500));
     setIsLoading(false);
-    showToast('Application submitted successfully!', 'success');
+    showToast('success', 'Application submitted successfully!');
   };
 
   const handleCategoryPress = (categoryName: string) => {
     setActiveCategory(categoryName === activeCategory ? null : categoryName);
     showToast(
+      'info',
       activeCategory === categoryName 
-        ? 'Category filter removed' 
-        : `Filtered by ${categoryName}`,
-      'info'
+        ? 'Category filter removed' : `Filtered by ${categoryName}`
     );
   };
 
   const handleLoadMore = () => {
     if (displayedJobs.length < sortedJobs.length) {
       setCurrentPage(prev => prev + 1);
-      showToast('Loading more jobs...', 'info');
+      showToast('info', 'Loading more jobs...');
     } else {
-      showToast('No more jobs to load', 'info');
+      showToast('info', 'No more jobs to load');
     }
   };
 
@@ -241,16 +306,50 @@ export default function SearchScreen() {
       prev.includes(term) ? prev.filter(t => t !== term) : [...prev, term]
     );
     showToast(
+      'success',
       jobAlerts.includes(term) 
         ? `Alert removed for "${term}"` 
-        : `Alert created for "${term}"`,
-      'success'
+        : `Alert created for "${term}"`
     );
   };
 
   const clearSearchHistory = () => {
     setSearchHistory([]);
-    showToast('Search history cleared', 'info');
+    showToast('info', 'Search history cleared');
+  };
+
+  const handleQuickAction = (actionId: string) => {
+    switch (actionId) {
+      case '1':
+        showToast('info', 'Applying to all jobs...');
+        break;
+      case '2':
+        showToast('success', 'Search saved successfully');
+        break;
+      case '3':
+        showToast('info', 'Exporting results...');
+        break;
+      case '4':
+        showToast('info', 'Sharing search results...');
+        break;
+    }
+  };
+
+  const onRefresh = async () => {
+    setIsRefreshing(true);
+    // Simulate refresh
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setCurrentPage(1);
+    setIsRefreshing(false);
+    showToast('success', 'Search refreshed');
+  };
+
+  const handleShareJob = (job: any) => {
+    showToast('info', `Sharing ${job.title} position`);
+  };
+
+  const handleViewJob = (job: any) => {
+    showToast('info', `Viewing ${job.title} details`);
   };
 
   const AdvancedFiltersModal = () => (
@@ -368,7 +467,7 @@ export default function SearchScreen() {
               setExperienceLevel([]);
               setJobType([]);
               setDistance(50);
-              showToast('Filters cleared', 'info');
+              showToast('info', 'Filters cleared');
             }}
           >
             <Text style={styles.clearButtonText}>Clear All</Text>
@@ -377,7 +476,7 @@ export default function SearchScreen() {
             style={styles.applyButton}
             onPress={() => {
               setShowAdvancedFilters(false);
-              showToast('Filters applied', 'success');
+              showToast('success', 'Filters applied');
             }}
           >
             <Text style={styles.applyButtonText}>Apply Filters</Text>
@@ -394,13 +493,13 @@ export default function SearchScreen() {
         <View style={styles.headerButtons}>
           <TouchableOpacity 
             style={styles.headerButton}
-            onPress={() => showToast('Location services coming soon', 'info')}
+            onPress={() => showToast('info', 'Location services coming soon')}
           >
             <MapPin size={20} color="#2563EB" />
           </TouchableOpacity>
           <TouchableOpacity 
             style={styles.headerButton}
-            onPress={() => showToast('Job alerts: ' + jobAlerts.length, 'info')}
+            onPress={() => showToast('info', `Job alerts: ${jobAlerts.length}`)}
           >
             <Bell size={20} color="#2563EB" />
           </TouchableOpacity>
@@ -429,12 +528,14 @@ export default function SearchScreen() {
             </TouchableOpacity>
           )}
         </View>
-        <TouchableOpacity 
-          style={[styles.voiceButton, isListening && styles.voiceButtonActive]}
-          onPress={handleVoiceSearch}
-        >
-          <Mic size={20} color={isListening ? "#EF4444" : "#2563EB"} />
-        </TouchableOpacity>
+        <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+          <TouchableOpacity 
+            style={[styles.voiceButton, isListening && styles.voiceButtonActive]}
+            onPress={handleVoiceSearch}
+          >
+            <Mic size={20} color={isListening ? "#EF4444" : "#2563EB"} />
+          </TouchableOpacity>
+        </Animated.View>
         <TouchableOpacity 
           style={styles.filterButton}
           onPress={() => setShowAdvancedFilters(true)}
@@ -459,7 +560,60 @@ export default function SearchScreen() {
         </Animated.View>
       )}
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            colors={['#2563EB']}
+            tintColor="#2563EB"
+          />
+        }
+      >
+        {/* Quick Actions */}
+        {displayedJobs.length > 0 && (
+          <View style={styles.quickActionsSection}>
+            <Text style={styles.sectionTitle}>Quick Actions</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {quickActions.map((action) => (
+                <TouchableOpacity
+                  key={action.id}
+                  style={styles.quickActionButton}
+                  onPress={() => handleQuickAction(action.id)}
+                >
+                  <View style={[styles.quickActionIcon, { backgroundColor: action.color }]}>
+                    <action.icon size={16} color="white" />
+                  </View>
+                  <Text style={styles.quickActionText}>{action.title}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* Search Analytics */}
+        {searchAnalytics.totalSearches > 0 && (
+          <View style={styles.analyticsSection}>
+            <Text style={styles.sectionTitle}>Search Insights</Text>
+            <View style={styles.analyticsCard}>
+              <View style={styles.analyticsRow}>
+                <Text style={styles.analyticsLabel}>Total Searches:</Text>
+                <Text style={styles.analyticsValue}>{searchAnalytics.totalSearches}</Text>
+              </View>
+              <View style={styles.analyticsRow}>
+                <Text style={styles.analyticsLabel}>Current Results:</Text>
+                <Text style={styles.analyticsValue}>{displayedJobs.length}</Text>
+              </View>
+              <View style={styles.analyticsRow}>
+                <Text style={styles.analyticsLabel}>Saved Jobs:</Text>
+                <Text style={styles.analyticsValue}>{savedJobs.length}</Text>
+              </View>
+            </View>
+          </View>
+        )}
+
         {/* Filter Tabs */}
         <ScrollView 
           horizontal 
@@ -540,11 +694,41 @@ export default function SearchScreen() {
               >
                 <Text style={styles.categoryIcon}>{category.icon}</Text>
                 <Text style={styles.categoryName}>{category.name}</Text>
-                <Text style={styles.categoryJobs}>{category.jobs} jobs</Text>
+                <View style={styles.categoryStats}>
+                  <Text style={styles.categoryJobs}>{category.jobs} jobs</Text>
+                  <Text style={styles.categoryGrowth}>{category.growth}</Text>
+                </View>
               </TouchableOpacity>
             ))}
           </View>
         </View>
+
+        {/* Recommendations */}
+        {recommendations.length > 0 && (
+          <View style={styles.recommendationsSection}>
+            <View style={styles.recommendationsHeader}>
+              <Sparkles size={20} color="#F59E0B" />
+              <Text style={styles.sectionTitle}>Recommended for You</Text>
+            </View>
+            {recommendations.map((job: any) => (
+              <View key={job.id} style={styles.recommendationCard}>
+                <View style={styles.recommendationHeader}>
+                  <Text style={styles.recommendationTitle}>{job.title}</Text>
+                  <View style={styles.recommendationActions}>
+                    <TouchableOpacity onPress={() => handleViewJob(job)}>
+                      <Eye size={16} color="#6B7280" />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => handleShareJob(job)}>
+                      <Share2 size={16} color="#6B7280" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                <Text style={styles.recommendationCompany}>{job.company}</Text>
+                <Text style={styles.recommendationSalary}>{job.pay}</Text>
+              </View>
+            ))}
+          </View>
+        )}
 
         {/* Popular Searches */}
         <View style={styles.popularSection}>
@@ -557,11 +741,16 @@ export default function SearchScreen() {
                 onPress={() => handleSearch(search.term)}
               >
                 <View style={styles.popularContent}>
-                  <Text style={styles.popularTerm}>{search.term}</Text>
-                  <Text style={styles.popularCount}>{search.count} jobs</Text>
+                  <View style={styles.popularHeader}>
+                    <Text style={styles.popularTerm}>{search.term}</Text>
+                    {search.trending && <TrendingUp size={16} color="#F59E0B" />}
+                  </View>
+                  <View style={styles.popularStats}>
+                    <Text style={styles.popularCount}>{search.count} jobs</Text>
+                    <Text style={styles.popularGrowth}>{search.growth}</Text>
+                  </View>
                 </View>
                 <View style={styles.popularActions}>
-                  {search.trending && <TrendingUp size={16} color="#F59E0B" />}
                   <TouchableOpacity onPress={() => handleJobAlert(search.term)}>
                     <Bell size={16} color={jobAlerts.includes(search.term) ? "#2563EB" : "#9CA3AF"} />
                   </TouchableOpacity>
@@ -599,6 +788,17 @@ export default function SearchScreen() {
               <Text style={styles.emptyStateSubtitle}>
                 Try adjusting your search criteria or filters
               </Text>
+              <TouchableOpacity 
+                style={styles.retryButton}
+                onPress={() => {
+                  setSearchQuery('');
+                  setActiveFilter('all');
+                  setActiveCategory(null);
+                }}
+              >
+                <RotateCcw size={16} color="#2563EB" />
+                <Text style={styles.retryButtonText}>Try Again</Text>
+              </TouchableOpacity>
             </View>
           ) : (
             <>
@@ -606,7 +806,7 @@ export default function SearchScreen() {
                 <JobCard
                   key={job.id}
                   job={job}
-                  onPress={() => {}}
+                  onPress={() => handleViewJob(job)}
                   onSave={handleSaveJob}
                   onApply={handleApplyJob}
                   isSaved={savedJobs.includes(job.id)}
@@ -767,6 +967,56 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
+  quickActionsSection: {
+    paddingHorizontal: 20,
+    marginBottom: 24,
+  },
+  quickActionButton: {
+    alignItems: 'center',
+    marginRight: 16,
+    minWidth: 80,
+  },
+  quickActionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  quickActionText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+    color: '#374151',
+    textAlign: 'center',
+  },
+  analyticsSection: {
+    paddingHorizontal: 20,
+    marginBottom: 24,
+  },
+  analyticsCard: {
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  analyticsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  analyticsLabel: {
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
+    color: '#6B7280',
+  },
+  analyticsValue: {
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+    color: '#111827',
+  },
   filtersContainer: {
     paddingLeft: 20,
     marginBottom: 16,
@@ -876,10 +1126,66 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 4,
   },
+  categoryStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   categoryJobs: {
     fontSize: 12,
     fontFamily: 'Inter-Regular',
     color: '#6B7280',
+  },
+  categoryGrowth: {
+    fontSize: 11,
+    fontFamily: 'Inter-Medium',
+    color: '#10B981',
+  },
+  recommendationsSection: {
+    paddingHorizontal: 20,
+    marginBottom: 32,
+  },
+  recommendationsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 8,
+  },
+  recommendationCard: {
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    marginBottom: 12,
+  },
+  recommendationHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  recommendationTitle: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    color: '#111827',
+    flex: 1,
+  },
+  recommendationActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  recommendationCompany: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: '#6B7280',
+    marginBottom: 4,
+  },
+  recommendationSalary: {
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
+    color: '#10B981',
   },
   popularSection: {
     paddingHorizontal: 20,
@@ -901,16 +1207,31 @@ const styles = StyleSheet.create({
   popularContent: {
     flex: 1,
   },
+  popularHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 8,
+  },
   popularTerm: {
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
     color: '#111827',
-    marginBottom: 4,
+  },
+  popularStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   popularCount: {
     fontSize: 14,
     fontFamily: 'Inter-Regular',
     color: '#6B7280',
+  },
+  popularGrowth: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+    color: '#10B981',
   },
   popularActions: {
     flexDirection: 'row',
@@ -954,6 +1275,21 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     color: '#9CA3AF',
     textAlign: 'center',
+    marginBottom: 16,
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 8,
+  },
+  retryButtonText: {
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+    color: '#2563EB',
   },
   loadMoreButton: {
     backgroundColor: '#2563EB',
