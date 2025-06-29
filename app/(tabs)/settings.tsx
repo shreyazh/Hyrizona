@@ -540,7 +540,7 @@ export default function SettingsScreen() {
         {/* App Info */}
         <View style={styles.appInfo}>
           <Text style={styles.appVersion}>Hyrizona v1.0.0</Text>
-          <Text style={styles.appCopyright}>© 2025 Hyrizona. All rights reserved to MatrixAI.</Text>
+          <Text style={styles.appCopyright}>© 2025 Hyrizona. All rights reserved to Shreyash Srivastva.</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
