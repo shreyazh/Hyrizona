@@ -599,7 +599,7 @@ const styles = StyleSheet.create({
   },
   theirMessage: {
     alignSelf: 'flex-start',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#A9A9A9',
   },
   messageText: {
     color: '#fff',
