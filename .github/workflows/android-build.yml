@@ -2,8 +2,8 @@ name: Build & Deploy Android AAB
 
 on:
   push:
-    tags:
-      - 'v*'  # e.g., v1.0.0 to trigger buil
+    branches:
+      - main  # Change if your default branch is 'master'
 
 jobs:
   build:
