@@ -1,24 +1,19 @@
 {
-  "cli": {
-    "version": "latest",
-    "appVersionSource": "remote"
-  },
   "build": {
-    "development": {
-      "developmentClient": true,
-      "distribution": "internal"
-    },
-    "preview": {
-      "distribution": "internal"
-    },
     "production": {
       "android": {
         "buildType": "app-bundle",
-        "autoIncrement": true
+        "env": {
+          "ENV": "production"
+        }
       }
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "android": {
+        "serviceAccountKeyPath": "./google-play-key.json"
+      }
+    }
   }
 }
