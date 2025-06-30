@@ -21,15 +21,15 @@ jobs:
           node-version: 18
  
       - name: Install EAS CLI
-        run: npm install -g eas-cli
+        run: npm install -g eas-cli@latest
  
       - name: Install dependencies
         run: npm install
  
       - name: Build Android AAB and Wait
         run: |
-          eas build --platform android --profile production --non-interactive --wait
-          BUILD_URL=$(eas build:list --platform android --status finished --limit 1 --json | jq -r '.[0].artifacts.buildUrl')
+          eas build:list --platform android --status finished --limit 1 --json
+          BUILD_URL=$(eas build:list --platform android --status finished --limit 1 --json | tail -n 1 | jq -r '.[0].artifacts.buildUrl')
           mkdir -p aab_output
           curl -o aab_output/app.aab "$BUILD_URL"
  
