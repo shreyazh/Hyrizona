@@ -1,37 +1,38 @@
-name: Build Expo Android AAB
-
+name: Build & Deploy Android AAB
+ 
 on:
   push:
-    tags:
-      - 'v*'  # Triggers build on version tags like v1.0.0
-
+    branches:
+      - main
+ 
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}  # ✅ use EXPO_TOKEN here
+ 
     steps:
-      - name: 🧾 Checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: 🧱 Set up Node
+ 
+      - name: Set up Node
         uses: actions/setup-node@v3
         with:
           node-version: 18
-
-      - name: 📦 Install dependencies
-        run: npm install
-
-      - name: 🔐 Install EAS CLI
+ 
+      - name: Install EAS CLI
         run: npm install -g eas-cli
-
-      - name: 🔓 Authenticate with Expo
-        run: eas login --token ${{ secrets.EAS_ACCESS_TOKEN }}
-
-      - name: 🚀 Build Android AAB with EAS
+ 
+      - name: Install dependencies
+        run: npm install
+ 
+      - name: Build Android AAB and Wait
         run: |
-          mkdir build-output
-          eas build --platform android --profile production --non-interactive --wait --json > build-output/build-info.json
-
+          eas build --platform android --profile production --non-interactive --wait
+          BUILD_URL=$(eas build:list --platform android --status finished --limit 1 --json | jq -r '.[0].artifacts.buildUrl')
+          mkdir -p aab_output
+          curl -o aab_output/app.aab "$BUILD_URL"
+ 
       - name: Upload AAB to Google Play
         uses: r0adkll/upload-google-play@v1
         with:
