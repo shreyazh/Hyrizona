@@ -28,7 +28,7 @@ jobs:
  
       - name: Build Android AAB and Wait
         run: |
-          eas build:list --platform android --status finished --limit 1 --json
+          eas build:list --platform android --status finished --limit 1 --json --non-interactive
           BUILD_URL=$(eas build:list --platform android --status finished --limit 1 --json | tail -n 1 | jq -r '.[0].artifacts.buildUrl')
           mkdir -p aab_output
           curl -o aab_output/app.aab "$BUILD_URL"
