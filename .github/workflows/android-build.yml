@@ -46,23 +46,44 @@ jobs:
         run: npm install
 
       - name: Build Android AAB and Wait
+        # `set -euxo pipefail` ensures strict error checking and verbose output for debugging.
+        # -e: Exit immediately if a command exits with a non-zero status.
+        # -u: Treat unset variables as an error.
+        # -x: Print commands and their arguments as they are executed.
+        # -o pipefail: The return value of a pipeline is the status of the last command
+        #              to exit with a non-zero status, or zero if all commands exit successfully.
         run: |
+          set -euxo pipefail
+
           # Build the Android App Bundle for the production profile.
           # --non-interactive: Prevents the CLI from prompting for input.
           # --wait: Waits for the build to complete on EAS servers before proceeding.
           echo "Starting EAS build for Android AAB..."
           eas build --platform android --profile production --non-interactive --wait
 
-          # Retrieve the URL of the finished AAB artifact.
-          # jq is used to parse the JSON output from `eas build:list` and extract the buildUrl.
-          # `2>/dev/null` is added to redirect any stderr output (like warnings) to null,
-          # ensuring only the clean JSON goes to jq.
+          # Capture the raw output of eas build:list into a variable.
+          # Redirect stderr (2>) to /dev/null to prevent informational messages from interfering with jq.
           echo "Attempting to retrieve AAB build URL..."
-          BUILD_URL=$(eas build:list --platform android --status finished --limit 1 --json 2>/dev/null | jq -r '.[0].artifacts.buildUrl')
+          EAS_BUILD_LIST_OUTPUT=$(eas build:list --platform android --status finished --limit 1 --json 2>/dev/null)
 
-          # Check if BUILD_URL is empty, indicating an issue with retrieving the build URL.
+          # Check if the captured output is empty, which would indicate an issue.
+          if [[ -z "$EAS_BUILD_LIST_OUTPUT" ]]; then
+            echo "Error: 'eas build:list' returned empty output. No finished builds might be available or an unexpected issue occurred."
+            echo "Please check your EAS build logs on expo.dev for details: https://expo.dev/accounts/shreyazh/projects/hyrizona/builds/"
+            exit 1
+          fi
+
+          # Attempt to parse the JSON from the captured output and extract the build URL.
+          # Using 'echo "$EAS_BUILD_LIST_OUTPUT" | jq -r ...' to ensure only the
+          # captured output is fed to jq.
+          BUILD_URL=$(echo "$EAS_BUILD_LIST_OUTPUT" | jq -r '.[0].artifacts.buildUrl')
+
+          # Check if BUILD_URL is empty after jq processing, indicating a parsing failure or missing data.
           if [ -z "$BUILD_URL" ]; then
-            echo "Error: Could not retrieve AAB build URL. This might happen if no finished builds are found or if the EAS CLI output format is unexpected."
+            echo "Error: Could not retrieve AAB build URL from the 'eas build:list' JSON output."
+            echo "Raw output from 'eas build:list' was:"
+            echo "$EAS_BUILD_LIST_OUTPUT" # Print raw output for debugging
+            echo "This might happen if no finished builds are found or if the JSON structure is unexpected by jq."
             echo "Please check your EAS build logs on expo.dev for details: https://expo.dev/accounts/shreyazh/projects/hyrizona/builds/"
             exit 1 # Exit with an error code if the URL is not found
           fi
