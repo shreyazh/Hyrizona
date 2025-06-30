@@ -28,23 +28,24 @@ jobs:
 
       - name: Build Android AAB and Wait
         run: |
-          BUILD_JSON=$(eas build:list --platform android --status finished --limit 1 --json --non-interactive 2>/dev/null)
+          eas login --token $EXPO_TOKEN
+          
+          BUILD_JSON=$(eas build:list --platform android --status finished --limit 1 --json --non-interactive 2>&1)
+          if [ $? -ne 0 ]; then
+            echo "EAS command failed: $BUILD_JSON"
+            exit 1
+          fi
+          
           if [ -z "$BUILD_JSON" ] || [ "$BUILD_JSON" = "[]" ]; then
             echo "No finished builds found."
             exit 1
           fi
+          
           BUILD_URL=$(echo "$BUILD_JSON" | jq -r '.[0].artifacts.buildUrl')
-          if [ -z "$BUILD_URL" ]; then
+          if [ -z "$BUILD_URL" ] || [ "$BUILD_URL" = "null" ]; then
             echo "No build URL found."
             exit 1
           fi
+          
           mkdir -p aab_output
-          curl -o aab_output/app.aab "$BUILD_URL"
-
-      - name: Upload AAB to Google Play
-        uses: r0adkll/upload-google-play@v1
-        with:
-          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
-          packageName: com.aimatrix
-          releaseFiles: aab_output/app.aab
-          track: production
+          curl -o aab_output/app.aab "$BU
