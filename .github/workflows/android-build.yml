@@ -1,38 +1,37 @@
 name: Build & Deploy Android AAB
- 
+
 on:
   push:
     branches:
       - main
- 
+
 jobs:
   build:
     runs-on: ubuntu-latest
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}  # ✅ use EXPO_TOKEN here
- 
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
- 
+
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: 18
- 
+
       - name: Install EAS CLI
         run: npm install -g eas-cli@latest
- 
+
       - name: Install dependencies
         run: npm install
- 
+
       - name: Build Android AAB and Wait
         run: |
-          eas build:list --platform android --status finished --limit 1 --json --non-interactive
-          BUILD_URL=$(eas build:list --platform android --status finished --limit 1 --json | tail -n 1 | jq -r '.[0].artifacts.buildUrl')
+          BUILD_URL=$(eas build:list --platform android --status finished --limit 1 --json --non-interactive | jq -r '.[0].artifacts.buildUrl')
           mkdir -p aab_output
           curl -o aab_output/app.aab "$BUILD_URL"
- 
+
       - name: Upload AAB to Google Play
         uses: r0adkll/upload-google-play@v1
         with:
