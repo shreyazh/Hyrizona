@@ -9,7 +9,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}  # ✅ use EXPO_TOKEN here
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
     steps:
       - name: Checkout code
@@ -28,7 +28,16 @@ jobs:
 
       - name: Build Android AAB and Wait
         run: |
-          BUILD_URL=$(eas build:list --platform android --status finished --limit 1 --json --non-interactive | jq -r '.[0].artifacts.buildUrl')
+          BUILD_JSON=$(eas build:list --platform android --status finished --limit 1 --json --non-interactive 2>/dev/null)
+          if [ -z "$BUILD_JSON" ] || [ "$BUILD_JSON" = "[]" ]; then
+            echo "No finished builds found."
+            exit 1
+          fi
+          BUILD_URL=$(echo "$BUILD_JSON" | jq -r '.[0].artifacts.buildUrl')
+          if [ -z "$BUILD_URL" ]; then
+            echo "No build URL found."
+            exit 1
+          fi
           mkdir -p aab_output
           curl -o aab_output/app.aab "$BUILD_URL"
 
