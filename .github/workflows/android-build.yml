@@ -1,42 +1,89 @@
 name: Build & Deploy Android AAB
- 
+
+# Trigger the workflow on pushes to the 'main' branch
 on:
   push:
     branches:
       - main
- 
+
 jobs:
   build:
+    # Run the job on the latest Ubuntu environment
     runs-on: ubuntu-latest
     env:
-      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}  # ✅ use EXPO_TOKEN here
- 
+      # Use the EXPO_TOKEN from GitHub Secrets for authentication with EAS
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
- 
-      - name: Set up Node
-        uses: actions/setup-node@v3
+        # Uses the official action to checkout your repository code
+        uses: actions/checkout@v4 # Updated to v4 for latest features
+
+      - name: Set up Node.js
+        # Configures Node.js environment
+        uses: actions/setup-node@v4 # Updated to v4
         with:
-          node-version: 18
- 
+          node-version: 20 # Recommended: Use Node.js 20 LTS for stability and support
+
+      - name: Cache Node.js modules
+        # Caches npm dependencies to speed up subsequent workflow runs.
+        # This caches `eas-cli` globally and your project's `node_modules`.
+        uses: actions/cache@v4 # Updated to v4
+        with:
+          path: |
+            ~/.npm
+            **/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
       - name: Install EAS CLI
+        # Installs the Expo Application Services CLI globally
         run: npm install -g eas-cli
- 
-      - name: Install dependencies
+
+      - name: Install project dependencies
+        # Installs your project's npm dependencies
         run: npm install
- 
+
       - name: Build Android AAB and Wait
         run: |
+          # Build the Android App Bundle for the production profile.
+          # --non-interactive: Prevents the CLI from prompting for input.
+          # --wait: Waits for the build to complete on EAS servers before proceeding.
+          echo "Starting EAS build for Android AAB..."
           eas build --platform android --profile production --non-interactive --wait
+
+          # Retrieve the URL of the finished AAB artifact.
+          # jq is used to parse the JSON output from `eas build:list` and extract the buildUrl.
+          echo "Retrieving AAB build URL..."
           BUILD_URL=$(eas build:list --platform android --status finished --limit 1 --json | jq -r '.[0].artifacts.buildUrl')
+
+          # Check if BUILD_URL is empty, indicating an issue with retrieving the build URL.
+          if [ -z "$BUILD_URL" ]; then
+            echo "Error: Could not retrieve AAB build URL. Please check your EAS build logs on expo.dev."
+            exit 1 # Exit with an error code if the URL is not found
+          fi
+
+          echo "AAB build URL retrieved: $BUILD_URL"
+
+          # Create a directory to store the downloaded AAB file.
           mkdir -p aab_output
+
+          # Download the AAB file from the retrieved URL into the aab_output directory.
+          echo "Downloading AAB file..."
           curl -o aab_output/app.aab "$BUILD_URL"
- 
+          echo "AAB downloaded to aab_output/app.aab"
+
       - name: Upload AAB to Google Play
+        # Uses a third-party action to upload the AAB to Google Play Store
         uses: r0adkll/upload-google-play@v1
         with:
+          # Google Service Account JSON content provided as a plaintext secret.
+          # Ensure this secret (GOOGLE_SERVICE_ACCOUNT_JSON) is configured in your GitHub repository settings.
           serviceAccountJsonPlainText: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
-          packageName: com.aimatrix
-          releaseFiles: aab_output/app.aab
-          track: production
+          packageName: com.aimatrix # Your application's package name
+          releaseFiles: aab_output/app.aab # Path to the downloaded AAB file
+          track: production # The release track (e.g., production, beta, alpha, internal)
+          # Optional: You can uncomment and set these if you want to define a release name or status
+          # releaseName: My App Release ${{ github.run_number }}
+          # status: completed # Other options: 'draft', 'inProgress', 'halted'
