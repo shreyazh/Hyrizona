@@ -1,4 +1,4 @@
-package com.anonymous.hyrizona
+package com.ai4magic.hyrizona
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build
