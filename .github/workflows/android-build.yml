@@ -106,9 +106,9 @@ jobs:
           # Google Service Account JSON content provided as a plaintext secret.
           # Ensure this secret (GOOGLE_SERVICE_ACCOUNT_JSON) is configured in your GitHub repository settings.
           serviceAccountJsonPlainText: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
-          packageName: com.aimatrix # Your application's package name
+          packageName: com.ai4magic.hyrizona # Your application's package name
           releaseFiles: aab_output/app.aab # Path to the downloaded AAB file
-          track: production # The release track (e.g., production, beta, alpha, internal)
+          track: testing # The release track (e.g., production, beta, alpha, internal)
           # Optional: You can uncomment and set these if you want to define a release name or status
           # releaseName: My App Release ${{ github.run_number }}
           # status: completed # Other options: 'draft', 'inProgress', 'halted'
