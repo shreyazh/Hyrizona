@@ -1,4 +1,4 @@
-package com.anonymous.hyrizona
+package com.ai4magic.hyrizona
 
 import android.app.Application
 import android.content.res.Configuration
