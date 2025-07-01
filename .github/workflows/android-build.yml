@@ -1,6 +1,5 @@
 name: Build & Deploy Android AAB
 
-# Trigger the workflow on pushes to the 'main' branch
 on:
   push:
     branches:
@@ -8,27 +7,21 @@ on:
 
 jobs:
   build:
-    # Run the job on the latest Ubuntu environment
     runs-on: ubuntu-latest
     env:
-      # Use the EXPO_TOKEN from GitHub Secrets for authentication with EAS
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
     steps:
       - name: Checkout code
-        # Uses the official action to checkout your repository code
-        uses: actions/checkout@v4 # Updated to v4 for latest features
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
-        # Configures Node.js environment
-        uses: actions/setup-node@v4 # Updated to v4
+        uses: actions/setup-node@v4
         with:
-          node-version: 20 # Recommended: Use Node.js 20 LTS for stability and support
+          node-version: 20
 
       - name: Cache Node.js modules
-        # Caches npm dependencies to speed up subsequent workflow runs.
-        # This caches `eas-cli` globally and your project's `node_modules`.
-        uses: actions/cache@v4 # Updated to v4
+        uses: actions/cache@v4
         with:
           path: |
             ~/.npm
@@ -38,77 +31,47 @@ jobs:
             ${{ runner.os }}-node-
 
       - name: Install EAS CLI
-        # Installs the Expo Application Services CLI globally
         run: npm install -g eas-cli
 
       - name: Install project dependencies
-        # Installs your project's npm dependencies
         run: npm install
 
-      - name: Build Android AAB and Wait
-        # `set -euxo pipefail` ensures strict error checking and verbose output for debugging.
-        # -e: Exit immediately if a command exits with a non-zero status.
-        # -u: Treat unset variables as an error.
-        # -x: Print commands and their arguments as they are executed.
-        # -o pipefail: The return value of a pipeline is the status of the last command
-        #              to exit with a non-zero status, or zero if all commands exit successfully.
+      - name: Trigger Android AAB build on EAS (non-blocking)
+        run: |
+          set -euxo pipefail
+          echo "Starting EAS Android AAB build..."
+          eas build --platform android --profile production --non-interactive
+
+      - name: Wait and Download Latest Finished Android AAB (max 30 min)
         run: |
           set -euxo pipefail
 
-          # Build the Android App Bundle for the production profile.
-          # --non-interactive: Prevents the CLI from prompting for input.
-          # --wait: Waits for the build to complete on EAS servers before proceeding.
-          echo "Starting EAS build for Android AAB..."
-          eas build --platform android --profile production --non-interactive --wait
+          echo "Waiting for EAS build to complete..."
 
-          # Capture the raw output of eas build:list into a variable.
-          # Redirect stderr (2>) to /dev/null to prevent informational messages from interfering with jq.
-          # Added --non-interactive to eas build:list as it's required when using --json in a non-interactive context.
-          echo "Attempting to retrieve AAB build URL..."
-          EAS_BUILD_LIST_OUTPUT=$(eas build:list --platform android --status finished --limit 1 --json --non-interactive 2>/dev/null)
+          timeout 30m bash -c '
+            until eas build:list --platform android --status finished --limit 1 --json --non-interactive | jq -e ".[0].artifacts.buildUrl" > /dev/null; do
+              echo "Still waiting for build to finish..."
+              sleep 60
+            done
+          '
 
-          # Check if the captured output is empty, which would indicate an issue.
-          if [[ -z "$EAS_BUILD_LIST_OUTPUT" ]]; then
-            echo "Error: 'eas build:list' returned empty output. No finished builds might be available or an unexpected issue occurred."
-            echo "Please check your EAS build logs on expo.dev for details: https://expo.dev/accounts/shreyazh/projects/hyrizona/builds/"
+          echo "Fetching build URL..."
+          EAS_BUILD_LIST_OUTPUT=$(eas build:list --platform android --status finished --limit 1 --json --non-interactive)
+          BUILD_URL=$(echo "$EAS_BUILD_LIST_OUTPUT" | jq -r '.[0].artifacts.buildUrl')
+
+          if [ -z "$BUILD_URL" ]; then
+            echo "Error: Build URL not found."
             exit 1
           fi
 
-          # Attempt to parse the JSON from the captured output and extract the build URL.
-          # Using 'echo "$EAS_BUILD_LIST_OUTPUT" | jq -r ...' to ensure only the
-          # captured output is fed to jq.
-          BUILD_URL=$(echo "$EAS_BUILD_LIST_OUTPUT" | jq -r '.[0].artifacts.buildUrl')
-
-          # Check if BUILD_URL is empty after jq processing, indicating a parsing failure or missing data.
-          if [ -z "$BUILD_URL" ]; then
-            echo "Error: Could not retrieve AAB build URL from the 'eas build:list' JSON output."
-            echo "Raw output from 'eas build:list' was:"
-            echo "$EAS_BUILD_LIST_OUTPUT" # Print raw output for debugging
-            echo "This might happen if no finished builds are found or if the JSON structure is unexpected by jq."
-            echo "Please check your EAS build logs on expo.dev for details: https://expo.dev/accounts/shreyazh/projects/hyrizona/builds/"
-            exit 1 # Exit with an error code if the URL is not found
-          fi
-
-          echo "AAB build URL retrieved: $BUILD_URL"
-
-          # Create a directory to store the downloaded AAB file.
           mkdir -p aab_output
-
-          # Download the AAB file from the retrieved URL into the aab_output directory.
-          echo "Downloading AAB file..."
           curl -o aab_output/app.aab "$BUILD_URL"
-          echo "AAB downloaded to aab_output/app.aab"
+          echo "✅ AAB downloaded to aab_output/app.aab"
 
       - name: Upload AAB to Google Play
-        # Uses a third-party action to upload the AAB to Google Play Store
         uses: r0adkll/upload-google-play@v1
         with:
-          # Google Service Account JSON content provided as a plaintext secret.
-          # Ensure this secret (GOOGLE_SERVICE_ACCOUNT_JSON) is configured in your GitHub repository settings.
           serviceAccountJsonPlainText: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
-          packageName: com.aimatrix # Your application's package name
-          releaseFiles: aab_output/app.aab # Path to the downloaded AAB file
-          track: production # The release track (e.g., production, beta, alpha, internal)
-          # Optional: You can uncomment and set these if you want to define a release name or status
-          # releaseName: My App Release ${{ github.run_number }}
-          # status: completed # Other options: 'draft', 'inProgress', 'halted'
+          packageName: com.ai4magic.hyrizona
+          releaseFiles: aab_output/app.aab
+          track: production
