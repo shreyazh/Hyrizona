@@ -219,7 +219,7 @@ export default function SettingsScreen() {
   const handleRateApp = () => {
     const storeUrl = Platform.OS === 'ios' 
       ? 'https://apps.apple.com/app/hyrizona/id123456789'
-      : 'https://play.google.com/store/apps/details?id=com.hyrizona.app';
+      : 'https://play.google.com/store/apps/details?id=com.ai4magic.hyrizona';
     
     openExternalLink(storeUrl, 'App Store');
   };
