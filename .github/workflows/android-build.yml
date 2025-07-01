@@ -72,6 +72,6 @@ jobs:
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
-          packageName: com.aimatrix
+          packageName: com.ai4magic.hyrizona
           releaseFiles: aab_output/app.aab
           track: production
