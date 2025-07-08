@@ -32,6 +32,8 @@ interface JobCardProps {
   onSave: (jobId: string) => void;
   onApply: (jobId: string) => void;
   isSaved?: boolean;
+  isApplied?: boolean;
+  onApplyPress?: (job: Job) => void;
 }
 
 export default function JobCard({ 
@@ -39,7 +41,9 @@ export default function JobCard({
   onPress, 
   onSave, 
   onApply, 
-  isSaved = false 
+  isSaved = false,
+  isApplied,
+  onApplyPress
 }: JobCardProps) {
   const handlePress = () => onPress(job.id);
   const handleSave = () => onSave(job.id);
@@ -128,17 +132,15 @@ export default function JobCard({
             <Text style={styles.postedTime}>{job.postedTime}</Text>
           </View>
 
-          <TouchableOpacity 
-            style={styles.applyButton}
-            onPress={handleApply}
-          >
-            <LinearGradient
-              colors={['#2563EB', '#3B82F6']}
-              style={styles.applyGradient}
-            >
-              <Text style={styles.applyText}>Apply</Text>
-            </LinearGradient>
-          </TouchableOpacity>
+          {isApplied ? (
+            <View style={{ backgroundColor: '#10B981', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 }}>
+              <Text style={{ color: 'white', fontWeight: 'bold' }}>Applied</Text>
+            </View>
+          ) : (
+            <TouchableOpacity onPress={() => onApplyPress ? onApplyPress(job) : onApply?.(job.id)} style={{ backgroundColor: '#2563EB', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 }}>
+              <Text style={{ color: 'white', fontWeight: 'bold' }}>Apply</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Urgency Badge */}

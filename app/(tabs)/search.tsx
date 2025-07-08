@@ -42,6 +42,7 @@ import JobCard from '../../components/JobCard';
 import { mockJobs } from './index';
 import { useToast } from '../../hooks/useToast';
 import React from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 const SIDEBAR_BREAKPOINT = 768;
@@ -129,6 +130,86 @@ export default function SearchScreen() {
   const windowWidth = Dimensions.get('window').width;
   const isLargeScreen = windowWidth >= SIDEBAR_BREAKPOINT;
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  // Add state for saved searches
+  const [savedSearches, setSavedSearches] = useState<any[]>([]);
+  const [showSavedJobs, setShowSavedJobs] = useState(false);
+
+  // Load saved searches on mount
+  useEffect(() => {
+    (async () => {
+      const saved = await AsyncStorage.getItem('savedSearches');
+      if (saved) setSavedSearches(JSON.parse(saved));
+    })();
+  }, []);
+
+  // Save current search
+  const saveCurrentSearch = async () => {
+    const searchObj = {
+      query: searchQuery,
+      filter: activeFilter,
+      category: activeCategory,
+      salaryRange,
+      experienceLevel,
+      jobType,
+      timestamp: Date.now(),
+    };
+    // Prevent duplicates (same query+filter+category)
+    const exists = savedSearches.some(s =>
+      s.query === searchObj.query &&
+      s.filter === searchObj.filter &&
+      s.category === searchObj.category &&
+      JSON.stringify(s.salaryRange) === JSON.stringify(searchObj.salaryRange) &&
+      JSON.stringify(s.experienceLevel) === JSON.stringify(searchObj.experienceLevel) &&
+      JSON.stringify(s.jobType) === JSON.stringify(searchObj.jobType)
+    );
+    if (exists) {
+      showToast('info', 'This search is already saved');
+      return;
+    }
+    const updated = [searchObj, ...savedSearches].slice(0, 20); // max 20
+    setSavedSearches(updated);
+    await AsyncStorage.setItem('savedSearches', JSON.stringify(updated));
+    showToast('success', 'Search saved successfully');
+  };
+
+  // Delete saved search
+  const deleteSavedSearch = async (timestamp: number) => {
+    const updated = savedSearches.filter(s => s.timestamp !== timestamp);
+    setSavedSearches(updated);
+    await AsyncStorage.setItem('savedSearches', JSON.stringify(updated));
+    showToast('success', 'Saved search deleted');
+  };
+
+  // Run saved search
+  const runSavedSearch = (search: any) => {
+    setShowSavedJobs(false);
+    setSearchQuery(search.query);
+    setActiveFilter(search.filter);
+    setActiveCategory(search.category);
+    setSalaryRange(search.salaryRange);
+    setExperienceLevel(search.experienceLevel);
+    setJobType(search.jobType);
+    setCurrentPage(1);
+    showToast('info', `Loaded saved search: "${search.query}"`);
+  };
+
+  // Update handleQuickAction for Save Search
+  const handleQuickAction = (actionId: string) => {
+    switch (actionId) {
+      case '1':
+        handleBulkApply();
+        break;
+      case '2':
+        saveCurrentSearch();
+        break;
+      case '3':
+        showToast('info', 'Exporting results...');
+        break;
+      case '4':
+        showToast('info', 'Sharing search results...');
+        break;
+    }
+  };
 
   const { showToast } = useToast();
   const searchInputRef = useRef<TextInput>(null);
@@ -259,7 +340,9 @@ export default function SearchScreen() {
   // Enhanced pagination - show more jobs per page
   const jobsPerPage = 15; // Increased from 10 to 15
   // 1. Remove pagination: show all jobs
-  const displayedJobs = sortedJobs;
+  const displayedJobs = showSavedJobs
+    ? mockJobs.filter((job: any) => savedJobs.includes(job.id))
+    : sortedJobs;
 
   // Generate recommendations based on user behavior
   useEffect(() => {
@@ -453,23 +536,6 @@ export default function SearchScreen() {
   const clearSearchHistory = () => {
     setSearchHistory([]);
     showToast('info', 'Search history cleared');
-  };
-
-  const handleQuickAction = (actionId: string) => {
-    switch (actionId) {
-      case '1':
-        handleBulkApply();
-        break;
-      case '2':
-        showToast('success', 'Search saved successfully');
-        break;
-      case '3':
-        showToast('info', 'Exporting results...');
-        break;
-      case '4':
-        showToast('info', 'Sharing search results...');
-        break;
-    }
   };
 
   const onRefresh = async () => {
@@ -903,7 +969,7 @@ export default function SearchScreen() {
                   </View>
                   <TouchableOpacity 
                     style={styles.viewSavedButton}
-                    onPress={() => showToast('info', 'Viewing saved jobs...')}
+                    onPress={() => setShowSavedJobs(true)}
                   >
                     <Text style={styles.viewSavedButtonText}>View Saved Jobs</Text>
                   </TouchableOpacity>
@@ -982,6 +1048,14 @@ export default function SearchScreen() {
                 </View>
               ) : (
                 <>
+                  {showSavedJobs && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+                      <Text style={styles.sectionTitle}>Saved Jobs ({displayedJobs.length})</Text>
+                      <TouchableOpacity style={{ marginLeft: 16 }} onPress={() => setShowSavedJobs(false)}>
+                        <Text style={{ color: '#2563EB', fontSize: 15 }}>Back to Search</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
                   {displayedJobs.map((job: any) => (
                     <JobCard
                       key={job.id}
@@ -1039,6 +1113,35 @@ export default function SearchScreen() {
                       <Clock size={16} color="#9CA3AF" />
                       <Text style={styles.recentText}>{term}</Text>
                     </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {/* Saved Searches */}
+            {savedSearches.length > 0 && (
+              <View style={styles.savedSection}>
+                <View style={styles.savedHeader}>
+                  <Text style={styles.sectionTitle}>Saved Searches</Text>
+                </View>
+                <View style={styles.savedList}>
+                  {savedSearches.slice(0, 5).map((search, index) => (
+                    <View key={search.timestamp} style={styles.savedItem}>
+                      <TouchableOpacity 
+                        style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}
+                        onPress={() => runSavedSearch(search)}
+                      >
+                        <Bookmark size={16} color="#F59E0B" />
+                        <Text style={styles.savedText} numberOfLines={1}>
+                          {search.query || 'All Jobs'}
+                          {search.category ? ` • ${search.category}` : ''}
+                          {search.filter && search.filter !== 'all' ? ` • ${search.filter}` : ''}
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => deleteSavedSearch(search.timestamp)}>
+                        <X size={16} color="#EF4444" />
+                      </TouchableOpacity>
+                    </View>
                   ))}
                 </View>
               </View>
@@ -2039,5 +2142,36 @@ const styles = StyleSheet.create({
   recommendationActionsMinimal: {
     flexDirection: 'row',
     gap: 12,
+  },
+  // Add styles for saved searches section
+  savedSection: {
+    paddingHorizontal: 20,
+    marginBottom: 32,
+  },
+  savedHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  savedList: {
+    gap: 12,
+  },
+  savedItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    marginBottom: 4,
+  },
+  savedText: {
+    marginLeft: 12,
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: '#374151',
+    flex: 1,
   },
 });
