@@ -128,6 +128,7 @@ export default function SearchScreen() {
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const windowWidth = Dimensions.get('window').width;
   const isLargeScreen = windowWidth >= SIDEBAR_BREAKPOINT;
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   const { showToast } = useToast();
   const searchInputRef = useRef<TextInput>(null);
@@ -679,6 +680,7 @@ export default function SearchScreen() {
   }
 
   // 3. Main return: two-column layout with responsive sidebar
+  const showJobs = searchQuery.trim().length > 0;
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.searchMainContent}>
@@ -703,23 +705,26 @@ export default function SearchScreen() {
 
           {/* Search Bar */}
           <View style={styles.searchContainer}>
-            <View style={styles.searchBar}>
-              <SearchIcon size={20} color="#6B7280" />
+            <View style={[styles.searchBar, isSearchFocused && styles.searchBarFocused]}>
+              <SearchIcon size={22} color="#2563EB" style={{ marginRight: 10 }} />
               <TextInput
                 ref={searchInputRef}
                 style={styles.searchInput}
-                placeholder="Search jobs, skills, companies..."
+                placeholder="Search for jobs, companies, or skills..."
                 value={searchQuery}
                 onChangeText={(text) => {
                   setSearchQuery(text);
                   setShowSuggestions(text.length > 0);
                 }}
-                onFocus={() => setShowSuggestions(searchQuery.length > 0)}
+                onFocus={() => setIsSearchFocused(true)}
+                onBlur={() => setIsSearchFocused(false)}
                 onSubmitEditing={() => handleSearch(searchQuery)}
+                placeholderTextColor="#9CA3AF"
+                returnKeyType="search"
               />
               {searchQuery.length > 0 && (
                 <TouchableOpacity onPress={() => setSearchQuery('')}>
-                  <X size={16} color="#6B7280" />
+                  <X size={20} color="#9CA3AF" />
                 </TouchableOpacity>
               )}
             </View>
@@ -873,36 +878,6 @@ export default function SearchScreen() {
               </ScrollView>
             </View>
 
-            {/* Categories */}
-            <View style={styles.categoriesSection}>
-              <Text style={styles.sectionTitle}>Browse by Category</Text>
-              <View style={styles.categoriesGrid}>
-                {categoriesWithCounts.map((category) => (
-                  <TouchableOpacity
-                    key={category.id}
-                    style={[
-                      styles.categoryCard,
-                      activeCategory === category.name && { borderColor: '#2563EB', borderWidth: 2 }
-                    ]}
-                    activeOpacity={0.8}
-                    onPress={() => handleCategoryPress(category.name)}
-                  >
-                    <Text style={styles.categoryIcon}>{category.icon}</Text>
-                    <Text style={styles.categoryName}>{category.name}</Text>
-                    <View style={styles.categoryStats}>
-                      <Text style={styles.categoryJobs}>{category.jobs} jobs</Text>
-                      <Text style={styles.categoryGrowth}>{category.growth}</Text>
-                    </View>
-                    {activeCategory === category.name && (
-                      <View style={styles.activeCategoryIndicator}>
-                        <Text style={styles.activeCategoryText}>Active</Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
             {/* Application Summary */}
             {savedJobs.length > 0 && (
               <View style={styles.applicationSummarySection}>
@@ -936,50 +911,20 @@ export default function SearchScreen() {
               </View>
             )}
 
-            {/* Popular Searches */}
-            <View style={styles.popularSection}>
-              <Text style={styles.sectionTitle}>Trending Searches</Text>
-              <View style={styles.popularList}>
-                {popularSearches.map((search, index) => (
-                  <TouchableOpacity 
-                    key={index} 
-                    style={styles.popularItem}
-                    onPress={() => handleSearch(search.term)}
-                  >
-                    <View style={styles.popularContent}>
-                      <View style={styles.popularHeader}>
-                        <Text style={styles.popularTerm}>{search.term}</Text>
-                        {search.trending && <TrendingUp size={16} color="#F59E0B" />}
-                      </View>
-                      <View style={styles.popularStats}>
-                        <Text style={styles.popularCount}>{search.count} jobs</Text>
-                        <Text style={styles.popularGrowth}>{search.growth}</Text>
-                      </View>
-                    </View>
-                    <View style={styles.popularActions}>
-                      <TouchableOpacity onPress={() => handleJobAlert(search.term)}>
-                        <Bell size={16} color={jobAlerts.includes(search.term) ? "#2563EB" : "#9CA3AF"} />
-                      </TouchableOpacity>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
             {/* Job Results */}
             <View style={styles.jobsSection}>
               <View style={styles.jobsHeader}>
                 <View style={styles.jobsHeaderLeft}>
                   <Text style={styles.sectionTitle}>
-                    {displayedJobs.length} Jobs Found
+                    {showJobs ? `${displayedJobs.length} Jobs Found` : 'Find Jobs'}
                   </Text>
-                  {sortedJobs.length > displayedJobs.length && (
+                  {showJobs && sortedJobs.length > displayedJobs.length && (
                     <Text style={styles.jobsSubtitle}>
                       Showing {displayedJobs.length} of {sortedJobs.length} jobs
                     </Text>
                   )}
                 </View>
-                {(activeFilter !== 'all' || activeCategory || searchQuery) && (
+                {(activeFilter !== 'all' || activeCategory || searchQuery) && showJobs && (
                   <TouchableOpacity 
                     style={styles.clearFiltersButton}
                     onPress={() => {
@@ -995,7 +940,7 @@ export default function SearchScreen() {
               </View>
 
               {/* Search Results Summary */}
-              {(activeCategory || searchQuery) && (
+              {showJobs && (activeCategory || searchQuery) && (
                 <View style={styles.searchResultsSummary}>
                   <Text style={styles.summaryText}>
                     {activeCategory && `Category: ${activeCategory}`}
@@ -1008,7 +953,15 @@ export default function SearchScreen() {
                 </View>
               )}
 
-              {displayedJobs.length === 0 ? (
+              {!showJobs ? (
+                <View style={styles.emptyState}>
+                  <SearchIcon size={48} color="#D1D5DB" />
+                  <Text style={styles.emptyStateTitle}>Start your job search</Text>
+                  <Text style={styles.emptyStateSubtitle}>
+                    Use the search bar or select a trending job from the sidebar to see results.
+                  </Text>
+                </View>
+              ) : displayedJobs.length === 0 ? (
                 <View style={styles.emptyState}>
                   <SearchIcon size={48} color="#D1D5DB" />
                   <Text style={styles.emptyStateTitle}>No jobs found</Text>
@@ -1188,27 +1141,45 @@ const styles = StyleSheet.create({
   },
   searchContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    gap: 8,
+    paddingHorizontal: 0,
+    paddingTop: 16,
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    zIndex: 10,
   },
   searchBar: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderWidth: 1,
+    backgroundColor: '#fff',
+    borderRadius: 32,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    width: '90%',
+    maxWidth: 520,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+    borderWidth: 2,
     borderColor: '#E5E7EB',
+    marginBottom: 12,
+    transitionProperty: 'border-color, box-shadow',
+    transitionDuration: '0.2s',
+  },
+  searchBarFocused: {
+    borderColor: '#2563EB',
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 4,
   },
   searchInput: {
     flex: 1,
-    marginLeft: 12,
-    fontSize: 16,
-    fontFamily: 'Inter-Regular',
+    fontSize: 18,
     color: '#111827',
+    backgroundColor: 'transparent',
+    paddingVertical: 0,
+    paddingHorizontal: 0,
   },
   voiceButton: {
     width: 48,
