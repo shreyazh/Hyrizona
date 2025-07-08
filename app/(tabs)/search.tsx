@@ -10,7 +10,8 @@ import {
   Animated,
   Alert,
   Dimensions,
-  RefreshControl
+  RefreshControl,
+  Platform
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { 
@@ -43,6 +44,7 @@ import { useToast } from '../../hooks/useToast';
 import React from 'react';
 
 const { width } = Dimensions.get('window');
+const SIDEBAR_BREAKPOINT = 768;
 
 // Move popularSearches definition above TrendingJobsSidebar
 const popularSearches: { term: string; count: number; trending: boolean; growth: string }[] = [
@@ -123,6 +125,9 @@ export default function SearchScreen() {
     { id: '3', title: 'Export Results', icon: Download, color: '#8B5CF6' },
     { id: '4', title: 'Share Search', icon: Share2, color: '#06B6D4' }
   ]);
+  const [sidebarVisible, setSidebarVisible] = useState(false);
+  const windowWidth = Dimensions.get('window').width;
+  const isLargeScreen = windowWidth >= SIDEBAR_BREAKPOINT;
 
   const { showToast } = useToast();
   const searchInputRef = useRef<TextInput>(null);
@@ -252,7 +257,8 @@ export default function SearchScreen() {
 
   // Enhanced pagination - show more jobs per page
   const jobsPerPage = 15; // Increased from 10 to 15
-  const displayedJobs = sortedJobs.slice(0, currentPage * jobsPerPage);
+  // 1. Remove pagination: show all jobs
+  const displayedJobs = sortedJobs;
 
   // Generate recommendations based on user behavior
   useEffect(() => {
@@ -633,460 +639,519 @@ export default function SearchScreen() {
     </Modal>
   );
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Search Jobs</Text>
-        <View style={styles.headerButtons}>
-          <TouchableOpacity 
-            style={styles.headerButton}
-            onPress={() => showToast('info', 'Location services coming soon')}
-          >
-            <MapPin size={20} color="#2563EB" />
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.headerButton}
-            onPress={() => showToast('info', `Job alerts: ${jobAlerts.length}`)}
-          >
-            <Bell size={20} color="#2563EB" />
-          </TouchableOpacity>
+  // 2. Sidebar component with trending and recommendations
+  function SearchSidebar({ onSelect, recommendations, handleViewJob, handleShareJob }: {
+    onSelect: (term: string) => void;
+    recommendations: any[];
+    handleViewJob: (job: any) => void;
+    handleShareJob: (job: any) => void;
+  }) {
+    return (
+      <View style={styles.trendingSidebarMinimal}>
+        <View style={styles.sidebarCard}>
+          <TrendingJobsSidebar onSelect={onSelect} />
         </View>
-      </View>
-
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <View style={styles.searchBar}>
-          <SearchIcon size={20} color="#6B7280" />
-          <TextInput
-            ref={searchInputRef}
-            style={styles.searchInput}
-            placeholder="Search jobs, skills, companies..."
-            value={searchQuery}
-            onChangeText={(text) => {
-              setSearchQuery(text);
-              setShowSuggestions(text.length > 0);
-            }}
-            onFocus={() => setShowSuggestions(searchQuery.length > 0)}
-            onSubmitEditing={() => handleSearch(searchQuery)}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <X size={16} color="#6B7280" />
-            </TouchableOpacity>
-          )}
-        </View>
-        <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-          <TouchableOpacity 
-            style={[styles.voiceButton, isListening && styles.voiceButtonActive]}
-            onPress={handleVoiceSearch}
-          >
-            <Mic size={20} color={isListening ? "#EF4444" : "#2563EB"} />
-          </TouchableOpacity>
-        </Animated.View>
-        <TouchableOpacity 
-          style={styles.filterButton}
-          onPress={() => setShowAdvancedFilters(true)}
-        >
-          <Sliders size={20} color="#2563EB" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Search Suggestions */}
-      {showSuggestions && (
-        <Animated.View style={[styles.suggestionsContainer, { opacity: fadeAnim }]}>
-          {searchSuggestions.map((suggestion, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.suggestionItem}
-              onPress={() => handleSearch(suggestion)}
-            >
-              <SearchIcon size={16} color="#9CA3AF" />
-              <Text style={styles.suggestionText}>{suggestion}</Text>
-            </TouchableOpacity>
-          ))}
-        </Animated.View>
-      )}
-
-      <ScrollView 
-        style={styles.content} 
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={onRefresh}
-            colors={['#2563EB']}
-            tintColor="#2563EB"
-          />
-        }
-      >
-        {/* Quick Actions */}
-        {displayedJobs.length > 0 && (
-          <View style={styles.quickActionsSection}>
-            <Text style={styles.sectionTitle}>Quick Actions</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {quickActions.map((action) => (
-                <TouchableOpacity
-                  key={action.id}
-                  style={styles.quickActionButton}
-                  onPress={() => handleQuickAction(action.id)}
-                >
-                  <View style={[styles.quickActionIcon, { backgroundColor: action.color }]}>
-                    <action.icon size={16} color="white" />
-                  </View>
-                  <Text style={styles.quickActionText}>{action.title}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        )}
-
-        {/* Search Analytics */}
-        {searchAnalytics.totalSearches > 0 && (
-          <View style={styles.analyticsSection}>
-            <Text style={styles.sectionTitle}>Search Insights</Text>
-            <View style={styles.analyticsCard}>
-              <View style={styles.analyticsRow}>
-                <Text style={styles.analyticsLabel}>Total Searches:</Text>
-                <Text style={styles.analyticsValue}>{searchAnalytics.totalSearches}</Text>
-              </View>
-              <View style={styles.analyticsRow}>
-                <Text style={styles.analyticsLabel}>Current Results:</Text>
-                <Text style={styles.analyticsValue}>{displayedJobs.length}</Text>
-              </View>
-              <View style={styles.analyticsRow}>
-                <Text style={styles.analyticsLabel}>Saved Jobs:</Text>
-                <Text style={styles.analyticsValue}>{savedJobs.length}</Text>
-              </View>
-            </View>
-          </View>
-        )}
-
-        {/* Filter Tabs */}
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          style={styles.filtersContainer}
-          contentContainerStyle={styles.filtersContent}
-        >
-          {filters.map((filter) => {
-            const IconComponent = filter.icon;
-            return (
-              <TouchableOpacity
-                key={filter.id}
-                style={[
-                  styles.filterTab,
-                  activeFilter === filter.id && styles.activeFilterTab
-                ]}
-                onPress={() => setActiveFilter(filter.id)}
-              >
-                <IconComponent size={16} color={activeFilter === filter.id ? "white" : "#6B7280"} />
-                <Text style={[
-                  styles.filterTabText,
-                  activeFilter === filter.id && styles.activeFilterTabText
-                ]}>
-                  {filter.label}
-                </Text>
-                <Text style={[
-                  styles.filterCount,
-                  activeFilter === filter.id && styles.activeFilterCount
-                ]}>
-                  {filter.count}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-
-        {/* Sort Options */}
-        <View style={styles.sortContainer}>
-          <Text style={styles.sortLabel}>Sort by:</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {[
-              { id: 'relevance', label: 'Relevance' },
-              { id: 'date', label: 'Latest' },
-              { id: 'salary', label: 'Salary' }
-            ].map((option) => (
-              <TouchableOpacity
-                key={option.id}
-                style={[
-                  styles.sortOption,
-                  sortBy === option.id && styles.activeSortOption
-                ]}
-                onPress={() => setSortBy(option.id)}
-              >
-                <Text style={[
-                  styles.sortOptionText,
-                  sortBy === option.id && styles.activeSortOptionText
-                ]}>
-                  {option.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-
-        {/* Categories */}
-        <View style={styles.categoriesSection}>
-          <Text style={styles.sectionTitle}>Browse by Category</Text>
-          <View style={styles.categoriesGrid}>
-            {categoriesWithCounts.map((category) => (
-              <TouchableOpacity
-                key={category.id}
-                style={[
-                  styles.categoryCard,
-                  activeCategory === category.name && { borderColor: '#2563EB', borderWidth: 2 }
-                ]}
-                activeOpacity={0.8}
-                onPress={() => handleCategoryPress(category.name)}
-              >
-                <Text style={styles.categoryIcon}>{category.icon}</Text>
-                <Text style={styles.categoryName}>{category.name}</Text>
-                <View style={styles.categoryStats}>
-                  <Text style={styles.categoryJobs}>{category.jobs} jobs</Text>
-                  <Text style={styles.categoryGrowth}>{category.growth}</Text>
-                </View>
-                {activeCategory === category.name && (
-                  <View style={styles.activeCategoryIndicator}>
-                    <Text style={styles.activeCategoryText}>Active</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Application Summary */}
-        {savedJobs.length > 0 && (
-          <View style={styles.applicationSummarySection}>
-            <Text style={styles.sectionTitle}>Your Activity</Text>
-            <View style={styles.applicationSummaryCard}>
-              <View style={styles.summaryRow}>
-                <View style={styles.summaryItem}>
-                  <Text style={styles.summaryLabel}>Saved Jobs</Text>
-                  <Text style={styles.summaryValue}>{savedJobs.length}</Text>
-                </View>
-                <View style={styles.summaryItem}>
-                  <Text style={styles.summaryLabel}>Applied Today</Text>
-                  <Text style={styles.summaryValue}>
-                    {searchAnalytics.recentActivity.filter(activity => 
-                      activity.term.includes('Application')
-                    ).length}
-                  </Text>
-                </View>
-                <View style={styles.summaryItem}>
-                  <Text style={styles.summaryLabel}>Total Searches</Text>
-                  <Text style={styles.summaryValue}>{searchAnalytics.totalSearches}</Text>
-                </View>
-              </View>
-              <TouchableOpacity 
-                style={styles.viewSavedButton}
-                onPress={() => showToast('info', 'Viewing saved jobs...')}
-              >
-                <Text style={styles.viewSavedButtonText}>View Saved Jobs</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
-        {/* Recommendations */}
         {recommendations.length > 0 && (
-          <View style={styles.recommendationsSection}>
-            <View style={styles.recommendationsHeader}>
-              <Sparkles size={20} color="#F59E0B" />
-              <Text style={styles.sectionTitle}>Recommended for You</Text>
+          <View style={[styles.sidebarCard, { marginTop: 24 }]}> 
+            <View style={styles.recommendationsHeaderMinimal}>
+              <Sparkles size={18} color="#F59E0B" />
+              <Text style={styles.sidebarSectionTitle}>Recommended for You</Text>
             </View>
             {recommendations.map((job: any) => (
-              <View key={job.id} style={styles.recommendationCard}>
-                <View style={styles.recommendationHeader}>
-                  <Text style={styles.recommendationTitle}>{job.title}</Text>
-                  <View style={styles.recommendationActions}>
-                    <TouchableOpacity onPress={() => handleViewJob(job)}>
-                      <Eye size={16} color="#6B7280" />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => handleShareJob(job)}>
-                      <Share2 size={16} color="#6B7280" />
-                    </TouchableOpacity>
-                  </View>
+              <View key={job.id} style={styles.recommendationCardMinimal}>
+                <Text style={styles.recommendationTitleMinimal}>{job.title}</Text>
+                <Text style={styles.recommendationCompanyMinimal}>{job.company}</Text>
+                <Text style={styles.recommendationSalaryMinimal}>{job.pay}</Text>
+                <View style={styles.recommendationActionsMinimal}>
+                  <TouchableOpacity onPress={() => handleViewJob(job)}>
+                    <Eye size={14} color="#6B7280" />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => handleShareJob(job)}>
+                    <Share2 size={14} color="#6B7280" />
+                  </TouchableOpacity>
                 </View>
-                <Text style={styles.recommendationCompany}>{job.company}</Text>
-                <Text style={styles.recommendationSalary}>{job.pay}</Text>
               </View>
             ))}
           </View>
         )}
+      </View>
+    );
+  }
 
-        {/* Popular Searches */}
-        <View style={styles.popularSection}>
-          <Text style={styles.sectionTitle}>Trending Searches</Text>
-          <View style={styles.popularList}>
-            {popularSearches.map((search, index) => (
+  // 3. Main return: two-column layout with responsive sidebar
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.searchMainContent}>
+        <View style={styles.searchMainColumn}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Search Jobs</Text>
+            <View style={styles.headerButtons}>
               <TouchableOpacity 
-                key={index} 
-                style={styles.popularItem}
-                onPress={() => handleSearch(search.term)}
+                style={styles.headerButton}
+                onPress={() => showToast('info', 'Location services coming soon')}
               >
-                <View style={styles.popularContent}>
-                  <View style={styles.popularHeader}>
-                    <Text style={styles.popularTerm}>{search.term}</Text>
-                    {search.trending && <TrendingUp size={16} color="#F59E0B" />}
-                  </View>
-                  <View style={styles.popularStats}>
-                    <Text style={styles.popularCount}>{search.count} jobs</Text>
-                    <Text style={styles.popularGrowth}>{search.growth}</Text>
-                  </View>
-                </View>
-                <View style={styles.popularActions}>
-                  <TouchableOpacity onPress={() => handleJobAlert(search.term)}>
-                    <Bell size={16} color={jobAlerts.includes(search.term) ? "#2563EB" : "#9CA3AF"} />
-                  </TouchableOpacity>
-                </View>
+                <MapPin size={20} color="#2563EB" />
               </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Job Results */}
-        <View style={styles.jobsSection}>
-          <View style={styles.jobsHeader}>
-            <View style={styles.jobsHeaderLeft}>
-              <Text style={styles.sectionTitle}>
-                {displayedJobs.length} Jobs Found
-              </Text>
-              {sortedJobs.length > displayedJobs.length && (
-                <Text style={styles.jobsSubtitle}>
-                  Showing {displayedJobs.length} of {sortedJobs.length} jobs
-                </Text>
-              )}
+              <TouchableOpacity 
+                style={styles.headerButton}
+                onPress={() => showToast('info', `Job alerts: ${jobAlerts.length}`)}
+              >
+                <Bell size={20} color="#2563EB" />
+              </TouchableOpacity>
             </View>
-            {(activeFilter !== 'all' || activeCategory || searchQuery) && (
-              <TouchableOpacity 
-                style={styles.clearFiltersButton}
-                onPress={() => {
-                  setActiveFilter('all');
-                  setActiveCategory(null);
-                  setSearchQuery('');
-                  setCurrentPage(1);
-                }}
-              >
-                <Text style={styles.clearFiltersText}>Clear Filters</Text>
-              </TouchableOpacity>
-            )}
           </View>
 
-          {/* Search Results Summary */}
-          {(activeCategory || searchQuery) && (
-            <View style={styles.searchResultsSummary}>
-              <Text style={styles.summaryText}>
-                {activeCategory && `Category: ${activeCategory}`}
-                {activeCategory && searchQuery && ' • '}
-                {searchQuery && `Search: "${searchQuery}"`}
-              </Text>
-              <Text style={styles.summarySubtext}>
-                {sortedJobs.length} matching jobs found
-              </Text>
-            </View>
-          )}
-
-          {displayedJobs.length === 0 ? (
-            <View style={styles.emptyState}>
-              <SearchIcon size={48} color="#D1D5DB" />
-              <Text style={styles.emptyStateTitle}>No jobs found</Text>
-              <Text style={styles.emptyStateSubtitle}>
-                Try adjusting your search criteria or filters
-              </Text>
-              <TouchableOpacity 
-                style={styles.retryButton}
-                onPress={() => {
-                  setSearchQuery('');
-                  setActiveFilter('all');
-                  setActiveCategory(null);
+          {/* Search Bar */}
+          <View style={styles.searchContainer}>
+            <View style={styles.searchBar}>
+              <SearchIcon size={20} color="#6B7280" />
+              <TextInput
+                ref={searchInputRef}
+                style={styles.searchInput}
+                placeholder="Search jobs, skills, companies..."
+                value={searchQuery}
+                onChangeText={(text) => {
+                  setSearchQuery(text);
+                  setShowSuggestions(text.length > 0);
                 }}
-              >
-                <RotateCcw size={16} color="#2563EB" />
-                <Text style={styles.retryButtonText}>Try Again</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <>
-              {displayedJobs.map((job: any) => (
-                <JobCard
-                  key={job.id}
-                  job={job}
-                  onPress={() => handleViewJob(job)}
-                  onSave={handleSaveJob}
-                  onApply={handleApplyJob}
-                  isSaved={savedJobs.includes(job.id)}
-                />
-              ))}
-              
-              {displayedJobs.length < sortedJobs.length && (
-                <TouchableOpacity 
-                  style={styles.loadMoreButton}
-                  onPress={handleLoadMore}
-                >
-                  <Text style={styles.loadMoreText}>
-                    Load More Jobs ({sortedJobs.length - displayedJobs.length} remaining)
-                  </Text>
+                onFocus={() => setShowSuggestions(searchQuery.length > 0)}
+                onSubmitEditing={() => handleSearch(searchQuery)}
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')}>
+                  <X size={16} color="#6B7280" />
                 </TouchableOpacity>
               )}
+            </View>
+            <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+              <TouchableOpacity 
+                style={[styles.voiceButton, isListening && styles.voiceButtonActive]}
+                onPress={handleVoiceSearch}
+              >
+                <Mic size={20} color={isListening ? "#EF4444" : "#2563EB"} />
+              </TouchableOpacity>
+            </Animated.View>
+            <TouchableOpacity 
+              style={styles.filterButton}
+              onPress={() => setShowAdvancedFilters(true)}
+            >
+              <Sliders size={20} color="#2563EB" />
+            </TouchableOpacity>
+          </View>
 
-              {displayedJobs.length === sortedJobs.length && sortedJobs.length > 0 && (
-                <View style={styles.endOfResults}>
-                  <Text style={styles.endOfResultsText}>You've seen all available jobs</Text>
+          {/* Search Suggestions */}
+          {showSuggestions && (
+            <Animated.View style={[styles.suggestionsContainer, { opacity: fadeAnim }]}> 
+              {searchSuggestions.map((suggestion, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.suggestionItem}
+                  onPress={() => handleSearch(suggestion)}
+                >
+                  <SearchIcon size={16} color="#9CA3AF" />
+                  <Text style={styles.suggestionText}>{suggestion}</Text>
+                </TouchableOpacity>
+              ))}
+            </Animated.View>
+          )}
+
+          <ScrollView 
+            style={styles.content} 
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={onRefresh}
+                colors={['#2563EB']}
+                tintColor="#2563EB"
+              />
+            }
+          >
+            {/* Quick Actions */}
+            {displayedJobs.length > 0 && (
+              <View style={styles.quickActionsSection}>
+                <Text style={styles.sectionTitle}>Quick Actions</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  {quickActions.map((action) => (
+                    <TouchableOpacity
+                      key={action.id}
+                      style={styles.quickActionButton}
+                      onPress={() => handleQuickAction(action.id)}
+                    >
+                      <View style={[styles.quickActionIcon, { backgroundColor: action.color }]}>
+                        <action.icon size={16} color="white" />
+                      </View>
+                      <Text style={styles.quickActionText}>{action.title}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
+            {/* Search Analytics */}
+            {searchAnalytics.totalSearches > 0 && (
+              <View style={styles.analyticsSection}>
+                <Text style={styles.sectionTitle}>Search Insights</Text>
+                <View style={styles.analyticsCard}>
+                  <View style={styles.analyticsRow}>
+                    <Text style={styles.analyticsLabel}>Total Searches:</Text>
+                    <Text style={styles.analyticsValue}>{searchAnalytics.totalSearches}</Text>
+                  </View>
+                  <View style={styles.analyticsRow}>
+                    <Text style={styles.analyticsLabel}>Current Results:</Text>
+                    <Text style={styles.analyticsValue}>{displayedJobs.length}</Text>
+                  </View>
+                  <View style={styles.analyticsRow}>
+                    <Text style={styles.analyticsLabel}>Saved Jobs:</Text>
+                    <Text style={styles.analyticsValue}>{savedJobs.length}</Text>
+                  </View>
+                </View>
+              </View>
+            )}
+
+            {/* Filter Tabs */}
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              style={styles.filtersContainer}
+              contentContainerStyle={styles.filtersContent}
+            >
+              {filters.map((filter) => {
+                const IconComponent = filter.icon;
+                return (
+                  <TouchableOpacity
+                    key={filter.id}
+                    style={[
+                      styles.filterTab,
+                      activeFilter === filter.id && styles.activeFilterTab
+                    ]}
+                    onPress={() => setActiveFilter(filter.id)}
+                  >
+                    <IconComponent size={16} color={activeFilter === filter.id ? "white" : "#6B7280"} />
+                    <Text style={[
+                      styles.filterTabText,
+                      activeFilter === filter.id && styles.activeFilterTabText
+                    ]}>
+                      {filter.label}
+                    </Text>
+                    <Text style={[
+                      styles.filterCount,
+                      activeFilter === filter.id && styles.activeFilterCount
+                    ]}>
+                      {filter.count}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            {/* Sort Options */}
+            <View style={styles.sortContainer}>
+              <Text style={styles.sortLabel}>Sort by:</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {[
+                  { id: 'relevance', label: 'Relevance' },
+                  { id: 'date', label: 'Latest' },
+                  { id: 'salary', label: 'Salary' }
+                ].map((option) => (
+                  <TouchableOpacity
+                    key={option.id}
+                    style={[
+                      styles.sortOption,
+                      sortBy === option.id && styles.activeSortOption
+                    ]}
+                    onPress={() => setSortBy(option.id)}
+                  >
+                    <Text style={[
+                      styles.sortOptionText,
+                      sortBy === option.id && styles.activeSortOptionText
+                    ]}>
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
+            {/* Categories */}
+            <View style={styles.categoriesSection}>
+              <Text style={styles.sectionTitle}>Browse by Category</Text>
+              <View style={styles.categoriesGrid}>
+                {categoriesWithCounts.map((category) => (
+                  <TouchableOpacity
+                    key={category.id}
+                    style={[
+                      styles.categoryCard,
+                      activeCategory === category.name && { borderColor: '#2563EB', borderWidth: 2 }
+                    ]}
+                    activeOpacity={0.8}
+                    onPress={() => handleCategoryPress(category.name)}
+                  >
+                    <Text style={styles.categoryIcon}>{category.icon}</Text>
+                    <Text style={styles.categoryName}>{category.name}</Text>
+                    <View style={styles.categoryStats}>
+                      <Text style={styles.categoryJobs}>{category.jobs} jobs</Text>
+                      <Text style={styles.categoryGrowth}>{category.growth}</Text>
+                    </View>
+                    {activeCategory === category.name && (
+                      <View style={styles.activeCategoryIndicator}>
+                        <Text style={styles.activeCategoryText}>Active</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Application Summary */}
+            {savedJobs.length > 0 && (
+              <View style={styles.applicationSummarySection}>
+                <Text style={styles.sectionTitle}>Your Activity</Text>
+                <View style={styles.applicationSummaryCard}>
+                  <View style={styles.summaryRow}>
+                    <View style={styles.summaryItem}>
+                      <Text style={styles.summaryLabel}>Saved Jobs</Text>
+                      <Text style={styles.summaryValue}>{savedJobs.length}</Text>
+                    </View>
+                    <View style={styles.summaryItem}>
+                      <Text style={styles.summaryLabel}>Applied Today</Text>
+                      <Text style={styles.summaryValue}>
+                        {searchAnalytics.recentActivity.filter(activity => 
+                          activity.term.includes('Application')
+                        ).length}
+                      </Text>
+                    </View>
+                    <View style={styles.summaryItem}>
+                      <Text style={styles.summaryLabel}>Total Searches</Text>
+                      <Text style={styles.summaryValue}>{searchAnalytics.totalSearches}</Text>
+                    </View>
+                  </View>
                   <TouchableOpacity 
-                    style={styles.refreshResultsButton}
-                    onPress={onRefresh}
+                    style={styles.viewSavedButton}
+                    onPress={() => showToast('info', 'Viewing saved jobs...')}
+                  >
+                    <Text style={styles.viewSavedButtonText}>View Saved Jobs</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+            {/* Popular Searches */}
+            <View style={styles.popularSection}>
+              <Text style={styles.sectionTitle}>Trending Searches</Text>
+              <View style={styles.popularList}>
+                {popularSearches.map((search, index) => (
+                  <TouchableOpacity 
+                    key={index} 
+                    style={styles.popularItem}
+                    onPress={() => handleSearch(search.term)}
+                  >
+                    <View style={styles.popularContent}>
+                      <View style={styles.popularHeader}>
+                        <Text style={styles.popularTerm}>{search.term}</Text>
+                        {search.trending && <TrendingUp size={16} color="#F59E0B" />}
+                      </View>
+                      <View style={styles.popularStats}>
+                        <Text style={styles.popularCount}>{search.count} jobs</Text>
+                        <Text style={styles.popularGrowth}>{search.growth}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.popularActions}>
+                      <TouchableOpacity onPress={() => handleJobAlert(search.term)}>
+                        <Bell size={16} color={jobAlerts.includes(search.term) ? "#2563EB" : "#9CA3AF"} />
+                      </TouchableOpacity>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Job Results */}
+            <View style={styles.jobsSection}>
+              <View style={styles.jobsHeader}>
+                <View style={styles.jobsHeaderLeft}>
+                  <Text style={styles.sectionTitle}>
+                    {displayedJobs.length} Jobs Found
+                  </Text>
+                  {sortedJobs.length > displayedJobs.length && (
+                    <Text style={styles.jobsSubtitle}>
+                      Showing {displayedJobs.length} of {sortedJobs.length} jobs
+                    </Text>
+                  )}
+                </View>
+                {(activeFilter !== 'all' || activeCategory || searchQuery) && (
+                  <TouchableOpacity 
+                    style={styles.clearFiltersButton}
+                    onPress={() => {
+                      setActiveFilter('all');
+                      setActiveCategory(null);
+                      setSearchQuery('');
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <Text style={styles.clearFiltersText}>Clear Filters</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {/* Search Results Summary */}
+              {(activeCategory || searchQuery) && (
+                <View style={styles.searchResultsSummary}>
+                  <Text style={styles.summaryText}>
+                    {activeCategory && `Category: ${activeCategory}`}
+                    {activeCategory && searchQuery && ' • '}
+                    {searchQuery && `Search: "${searchQuery}"`}
+                  </Text>
+                  <Text style={styles.summarySubtext}>
+                    {sortedJobs.length} matching jobs found
+                  </Text>
+                </View>
+              )}
+
+              {displayedJobs.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <SearchIcon size={48} color="#D1D5DB" />
+                  <Text style={styles.emptyStateTitle}>No jobs found</Text>
+                  <Text style={styles.emptyStateSubtitle}>
+                    Try adjusting your search criteria or filters
+                  </Text>
+                  <TouchableOpacity 
+                    style={styles.retryButton}
+                    onPress={() => {
+                      setSearchQuery('');
+                      setActiveFilter('all');
+                      setActiveCategory(null);
+                    }}
                   >
                     <RotateCcw size={16} color="#2563EB" />
-                    <Text style={styles.refreshResultsText}>Refresh Results</Text>
+                    <Text style={styles.retryButtonText}>Try Again</Text>
                   </TouchableOpacity>
                 </View>
+              ) : (
+                <>
+                  {displayedJobs.map((job: any) => (
+                    <JobCard
+                      key={job.id}
+                      job={job}
+                      onPress={() => handleViewJob(job)}
+                      onSave={handleSaveJob}
+                      onApply={handleApplyJob}
+                      isSaved={savedJobs.includes(job.id)}
+                    />
+                  ))}
+                  
+                  {displayedJobs.length < sortedJobs.length && (
+                    <TouchableOpacity 
+                      style={styles.loadMoreButton}
+                      onPress={handleLoadMore}
+                    >
+                      <Text style={styles.loadMoreText}>
+                        Load More Jobs ({sortedJobs.length - displayedJobs.length} remaining)
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {displayedJobs.length === sortedJobs.length && sortedJobs.length > 0 && (
+                    <View style={styles.endOfResults}>
+                      <Text style={styles.endOfResultsText}>You've seen all available jobs</Text>
+                      <TouchableOpacity 
+                        style={styles.refreshResultsButton}
+                        onPress={onRefresh}
+                      >
+                        <RotateCcw size={16} color="#2563EB" />
+                        <Text style={styles.refreshResultsText}>Refresh Results</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </>
               )}
-            </>
-          )}
-        </View>
-
-        {/* Recent Searches */}
-        {searchHistory.length > 0 && (
-          <View style={styles.recentSection}>
-            <View style={styles.recentHeader}>
-              <Text style={styles.sectionTitle}>Recent Searches</Text>
-              <TouchableOpacity onPress={clearSearchHistory}>
-                <Text style={styles.clearHistoryText}>Clear</Text>
-              </TouchableOpacity>
             </View>
-            <View style={styles.recentList}>
-              {searchHistory.slice(0, 5).map((term, index) => (
-                <TouchableOpacity 
-                  key={index} 
-                  style={styles.recentItem}
-                  onPress={() => handleSearch(term)}
+
+            {/* Recent Searches */}
+            {searchHistory.length > 0 && (
+              <View style={styles.recentSection}>
+                <View style={styles.recentHeader}>
+                  <Text style={styles.sectionTitle}>Recent Searches</Text>
+                  <TouchableOpacity onPress={clearSearchHistory}>
+                    <Text style={styles.clearHistoryText}>Clear</Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.recentList}>
+                  {searchHistory.slice(0, 5).map((term, index) => (
+                    <TouchableOpacity 
+                      key={index} 
+                      style={styles.recentItem}
+                      onPress={() => handleSearch(term)}
+                    >
+                      <Clock size={16} color="#9CA3AF" />
+                      <Text style={styles.recentText}>{term}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {/* Popular Tags */}
+            <View style={styles.tagsSection}>
+              <Text style={styles.sectionTitle}>Popular Skills</Text>
+              <View style={styles.tagsContainer}>
+                {['Cleaning', 'Customer Service', 'Cash Handling', 'Food Prep', 'Stocking', 'Landscaping', 'Moving', 'Delivery', 'Communication', 'Teamwork', 'Reliability', 'Organization', 'Dishwashing', 'Barista', 'Event Setup', 'Farm Work', 'Security', 'Reception', 'Clerical', 'Multitasking', 'Problem Solving'].map((tag, index) => (
+                  <TouchableOpacity 
+                    key={index} 
+                    style={styles.tag}
+                    onPress={() => handleSearch(tag)}
+                  >
+                    <Text style={styles.tagText}>{tag}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </ScrollView>
+        </View>
+        {isLargeScreen ? (
+          <SearchSidebar 
+            onSelect={handleSearch} 
+            recommendations={recommendations} 
+            handleViewJob={handleViewJob} 
+            handleShareJob={handleShareJob} 
+          />
+        ) : (
+          <>
+            <TouchableOpacity
+              style={styles.sidebarToggleButton}
+              onPress={() => setSidebarVisible(true)}
+            >
+              <Text style={styles.sidebarToggleText}>☰</Text>
+            </TouchableOpacity>
+            <Modal
+              visible={sidebarVisible}
+              animationType="slide"
+              transparent
+              onRequestClose={() => setSidebarVisible(false)}
+            >
+              <TouchableOpacity
+                style={styles.sidebarOverlay}
+                activeOpacity={1}
+                onPress={() => setSidebarVisible(false)}
+              />
+              <View style={styles.sidebarDrawer}>
+                <TouchableOpacity
+                  style={styles.sidebarCloseButton}
+                  onPress={() => setSidebarVisible(false)}
                 >
-                  <Clock size={16} color="#9CA3AF" />
-                  <Text style={styles.recentText}>{term}</Text>
+                  <Text style={styles.sidebarCloseText}>×</Text>
                 </TouchableOpacity>
-              ))}
-            </View>
-          </View>
+                <SearchSidebar 
+                  onSelect={handleSearch} 
+                  recommendations={recommendations} 
+                  handleViewJob={handleViewJob} 
+                  handleShareJob={handleShareJob} 
+                />
+              </View>
+            </Modal>
+          </>
         )}
-
-        {/* Popular Tags */}
-        <View style={styles.tagsSection}>
-          <Text style={styles.sectionTitle}>Popular Skills</Text>
-          <View style={styles.tagsContainer}>
-            {['Cleaning', 'Customer Service', 'Cash Handling', 'Food Prep', 'Stocking', 'Landscaping', 'Moving', 'Delivery', 'Communication', 'Teamwork', 'Reliability', 'Organization', 'Dishwashing', 'Barista', 'Event Setup', 'Farm Work', 'Security', 'Reception', 'Clerical', 'Multitasking', 'Problem Solving'].map((tag, index) => (
-              <TouchableOpacity 
-                key={index} 
-                style={styles.tag}
-                onPress={() => handleSearch(tag)}
-              >
-                <Text style={styles.tagText}>{tag}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-      </ScrollView>
-
+      </View>
       <AdvancedFiltersModal />
     </SafeAreaView>
   );
@@ -1843,16 +1908,17 @@ const styles = StyleSheet.create({
   },
   searchMainColumn: {
     flex: 1,
+    minWidth: 0,
   },
   trendingSidebar: {
-    width: 260,
+    width: 320,
     backgroundColor: '#FFFFFF',
     borderLeftWidth: 1,
     borderColor: '#E5E7EB',
     padding: 16,
     display: 'flex',
     flexDirection: 'column',
-    gap: 12,
+    gap: 24,
   },
   trendingTitle: {
     fontSize: 16,
@@ -1884,5 +1950,123 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6B7280',
     marginTop: 2,
+  },
+  sidebarToggleButton: {
+    position: 'absolute',
+    bottom: 32,
+    right: 32,
+    zIndex: 100,
+    backgroundColor: '#2563EB',
+    borderRadius: 24,
+    width: 48,
+    height: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  sidebarToggleText: {
+    color: 'white',
+    fontSize: 28,
+    fontWeight: 'bold',
+  },
+  sidebarOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    zIndex: 99,
+  },
+  sidebarDrawer: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 320,
+    height: '100%',
+    backgroundColor: '#fff',
+    zIndex: 100,
+    shadowColor: '#000',
+    shadowOffset: { width: -2, height: 0 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
+    paddingTop: Platform.OS === 'android' ? 32 : 48,
+  },
+  sidebarCloseButton: {
+    position: 'absolute',
+    top: 12,
+    right: 16,
+    zIndex: 101,
+    padding: 8,
+  },
+  sidebarCloseText: {
+    fontSize: 32,
+    color: '#2563EB',
+    fontWeight: 'bold',
+  },
+  trendingSidebarMinimal: {
+    width: 320,
+    backgroundColor: 'transparent',
+    padding: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 0,
+  },
+  sidebarCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+  },
+  sidebarSectionTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#2563EB',
+    marginLeft: 8,
+  },
+  recommendationsHeaderMinimal: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  recommendationCardMinimal: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+  },
+  recommendationTitleMinimal: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 2,
+  },
+  recommendationCompanyMinimal: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginBottom: 2,
+  },
+  recommendationSalaryMinimal: {
+    fontSize: 12,
+    color: '#10B981',
+    marginBottom: 6,
+  },
+  recommendationActionsMinimal: {
+    flexDirection: 'row',
+    gap: 12,
   },
 });
