@@ -12,7 +12,8 @@ import {
   ActivityIndicator,
   Animated,
   Modal,
-  KeyboardAvoidingView
+  KeyboardAvoidingView,
+  Dimensions
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -1517,45 +1518,47 @@ export default function HomeScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.2)' }}
         >
-          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 24, width: '90%', maxWidth: 420 }}>
-            <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 16 }}>Post a Job</Text>
-            {([
-              { key: 'title', label: 'Job Title', placeholder: 'e.g. Construction Labourer' },
-              { key: 'company', label: 'Company', placeholder: 'e.g. Maple Construction' },
-              { key: 'location', label: 'Location', placeholder: 'e.g. Toronto, ON' },
-              { key: 'pay', label: 'Pay', placeholder: 'e.g. $22/hr' },
-              { key: 'duration', label: 'Duration', placeholder: 'e.g. Full-time' },
-              { key: 'skills', label: 'Skills (comma separated)', placeholder: 'e.g. Physical Labour, Teamwork' },
-              { key: 'postedTime', label: 'Posted Time', placeholder: 'e.g. 1 min ago' },
-              { key: 'urgency', label: 'Urgency (urgent/normal)', placeholder: 'e.g. urgent' },
-              { key: 'rating', label: 'Rating (0-5)', placeholder: 'e.g. 4.5' },
-              { key: 'applicants', label: 'Applicants', placeholder: 'e.g. 3' },
-              { key: 'verified', label: 'Verified (true/false)', placeholder: 'e.g. true' },
-              { key: 'category', label: 'Category', placeholder: 'e.g. Construction' },
-              { key: 'description', label: 'Description', placeholder: 'Job description...' },
-              { key: 'requirements', label: 'Requirements (comma separated)', placeholder: 'e.g. Physically fit, CSA-approved boots' },
-              { key: 'benefits', label: 'Benefits (comma separated)', placeholder: 'e.g. Health benefits, Overtime pay' },
-            ] as { key: keyof JobForm; label: string; placeholder: string }[]).map(field => (
-              <View key={field.key} style={{ marginBottom: 12 }}>
-                <Text style={{ fontWeight: '600', marginBottom: 4 }}>{field.label}</Text>
-                <TextInput
-                  style={{ borderWidth: 1, borderColor: jobFormErrors[field.key] ? '#EF4444' : '#E5E7EB', borderRadius: 8, padding: 10, fontSize: 15 }}
-                  placeholder={field.placeholder}
-                  value={String(jobForm[field.key])}
-                  onChangeText={text => setJobForm(f => ({ ...f, [field.key]: field.key === 'verified' ? (text === 'true') : text }))}
-                  autoCapitalize="none"
-                />
-                {jobFormErrors[field.key] && <Text style={{ color: '#EF4444', fontSize: 12 }}>{jobFormErrors[field.key]}</Text>}
+          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 24, width: '90%', maxWidth: 420, maxHeight: Dimensions.get('window').height * 0.9 }}>
+            <ScrollView contentContainerStyle={{ paddingBottom: 12 }} showsVerticalScrollIndicator={false}>
+              <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 16 }}>Post a Job</Text>
+              {([
+                { key: 'title', label: 'Job Title', placeholder: 'e.g. Construction Labourer' },
+                { key: 'company', label: 'Company', placeholder: 'e.g. Maple Construction' },
+                { key: 'location', label: 'Location', placeholder: 'e.g. Toronto, ON' },
+                { key: 'pay', label: 'Pay', placeholder: 'e.g. $22/hr' },
+                { key: 'duration', label: 'Duration', placeholder: 'e.g. Full-time' },
+                { key: 'skills', label: 'Skills (comma separated)', placeholder: 'e.g. Physical Labour, Teamwork' },
+                { key: 'postedTime', label: 'Posted Time', placeholder: 'e.g. 1 min ago' },
+                { key: 'urgency', label: 'Urgency (urgent/normal)', placeholder: 'e.g. urgent' },
+                { key: 'rating', label: 'Rating (0-5)', placeholder: 'e.g. 4.5' },
+                { key: 'applicants', label: 'Applicants', placeholder: 'e.g. 3' },
+                { key: 'verified', label: 'Verified (true/false)', placeholder: 'e.g. true' },
+                { key: 'category', label: 'Category', placeholder: 'e.g. Construction' },
+                { key: 'description', label: 'Description', placeholder: 'Job description...' },
+                { key: 'requirements', label: 'Requirements (comma separated)', placeholder: 'e.g. Physically fit, CSA-approved boots' },
+                { key: 'benefits', label: 'Benefits (comma separated)', placeholder: 'e.g. Health benefits, Overtime pay' },
+              ] as { key: keyof JobForm; label: string; placeholder: string }[]).map(field => (
+                <View key={field.key} style={{ marginBottom: 12 }}>
+                  <Text style={{ fontWeight: '600', marginBottom: 4 }}>{field.label}</Text>
+                  <TextInput
+                    style={{ borderWidth: 1, borderColor: jobFormErrors[field.key] ? '#EF4444' : '#E5E7EB', borderRadius: 8, padding: 10, fontSize: 15 }}
+                    placeholder={field.placeholder}
+                    value={String(jobForm[field.key])}
+                    onChangeText={text => setJobForm(f => ({ ...f, [field.key]: field.key === 'verified' ? (text === 'true') : text }))}
+                    autoCapitalize="none"
+                  />
+                  {jobFormErrors[field.key] && <Text style={{ color: '#EF4444', fontSize: 12 }}>{jobFormErrors[field.key]}</Text>}
+                </View>
+              ))}
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 12, marginTop: 8 }}>
+                <TouchableOpacity onPress={() => setShowPostJobModal(false)} style={{ padding: 12 }}>
+                  <Text style={{ color: '#6B7280', fontWeight: '600' }}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handlePostJob} style={{ backgroundColor: '#2563EB', padding: 12, borderRadius: 8 }}>
+                  <Text style={{ color: '#fff', fontWeight: '600' }}>Post Job</Text>
+                </TouchableOpacity>
               </View>
-            ))}
-            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 12, marginTop: 8 }}>
-              <TouchableOpacity onPress={() => setShowPostJobModal(false)} style={{ padding: 12 }}>
-                <Text style={{ color: '#6B7280', fontWeight: '600' }}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handlePostJob} style={{ backgroundColor: '#2563EB', padding: 12, borderRadius: 8 }}>
-                <Text style={{ color: '#fff', fontWeight: '600' }}>Post Job</Text>
-              </TouchableOpacity>
-            </View>
+            </ScrollView>
           </View>
         </KeyboardAvoidingView>
       </Modal>
