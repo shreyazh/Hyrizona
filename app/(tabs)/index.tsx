@@ -994,6 +994,7 @@ export default function HomeScreen() {
     activeHirers: 156,
     totalEarnings: 0
   });
+  const [appliedJobs, setAppliedJobs] = useState<string[]>([]);
 
   // Initialize displayed jobs
   useEffect(() => {
@@ -1130,7 +1131,10 @@ export default function HomeScreen() {
     try {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
-      showSuccess('Application Submitted!', 'Your application has been sent successfully');
+      setAppliedJobs(prev => [...prev, jobId]);
+      setTimeout(() => {
+        showSuccess('Application Submitted!', 'Your application has been sent successfully');
+      }, 400); // after animation
     } catch (error) {
       showError('Application Failed', 'Failed to submit application. Please try again.');
     } finally {
@@ -1371,6 +1375,7 @@ export default function HomeScreen() {
                   onSave={handleSaveJob}
                   onApply={handleApplyJob}
                   isSaved={savedJobs.includes(job.id)}
+                  isApplied={appliedJobs.includes(job.id)}
                 />
               ))}
             </View>

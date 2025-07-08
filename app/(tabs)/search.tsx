@@ -133,6 +133,7 @@ export default function SearchScreen() {
   // Add state for saved searches
   const [savedSearches, setSavedSearches] = useState<any[]>([]);
   const [showSavedJobs, setShowSavedJobs] = useState(false);
+  const [appliedJobs, setAppliedJobs] = useState<string[]>([]);
 
   // Load saved searches on mount
   useEffect(() => {
@@ -447,7 +448,10 @@ export default function SearchScreen() {
     try {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1500));
-      showToast('success', 'Application submitted successfully!');
+      setAppliedJobs(prev => [...prev, jobId]);
+      setTimeout(() => {
+        showToast('success', 'Application submitted successfully!');
+      }, 400); // after animation
       
       // Update job analytics
       setSearchAnalytics(prev => ({
@@ -1064,6 +1068,7 @@ export default function SearchScreen() {
                       onSave={handleSaveJob}
                       onApply={handleApplyJob}
                       isSaved={savedJobs.includes(job.id)}
+                      isApplied={appliedJobs.includes(job.id)}
                     />
                   ))}
                   
