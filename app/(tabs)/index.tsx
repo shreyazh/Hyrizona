@@ -10,7 +10,9 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
-  Animated
+  Animated,
+  Modal,
+  KeyboardAvoidingView
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -969,6 +971,24 @@ const defaultFilters: FilterOptions = {
   remoteOnly: false,
 };
 
+type JobForm = {
+  title: string;
+  company: string;
+  location: string;
+  pay: string;
+  duration: string;
+  skills: string;
+  postedTime: string;
+  urgency: 'urgent' | 'normal';
+  rating: string;
+  applicants: string;
+  verified: boolean;
+  category: string;
+  description: string;
+  requirements: string;
+  benefits: string;
+};
+
 export default function HomeScreen() {
   const router = useRouter();
   const { user } = useUser();
@@ -996,6 +1016,25 @@ export default function HomeScreen() {
     totalEarnings: 0
   });
   const [appliedJobs, setAppliedJobs] = useState<string[]>([]);
+  const [showPostJobModal, setShowPostJobModal] = useState(false);
+  const [jobForm, setJobForm] = useState<JobForm>({
+    title: '',
+    company: '',
+    location: '',
+    pay: '',
+    duration: '',
+    skills: '',
+    postedTime: '',
+    urgency: 'normal',
+    rating: '',
+    applicants: '',
+    verified: false,
+    category: '',
+    description: '',
+    requirements: '',
+    benefits: '',
+  });
+  const [jobFormErrors, setJobFormErrors] = useState<Partial<Record<keyof JobForm, string>>>({});
 
   // Initialize displayed jobs
   useEffect(() => {
@@ -1191,6 +1230,55 @@ export default function HomeScreen() {
     showInfo('Filters Cleared', 'All filters have been reset');
   };
 
+  const validateJobForm = () => {
+    const errors: any = {};
+    if (!jobForm.title) errors.title = 'Title is required';
+    if (!jobForm.company) errors.company = 'Company is required';
+    if (!jobForm.location) errors.location = 'Location is required';
+    if (!jobForm.pay) errors.pay = 'Pay is required';
+    if (!jobForm.duration) errors.duration = 'Duration is required';
+    if (!jobForm.skills) errors.skills = 'At least one skill is required';
+    if (!jobForm.postedTime) errors.postedTime = 'Posted time is required';
+    if (!jobForm.rating) errors.rating = 'Rating is required';
+    if (!jobForm.applicants) errors.applicants = 'Applicants is required';
+    if (!jobForm.category) errors.category = 'Category is required';
+    if (!jobForm.description) errors.description = 'Description is required';
+    if (!jobForm.requirements) errors.requirements = 'At least one requirement is required';
+    if (!jobForm.benefits) errors.benefits = 'At least one benefit is required';
+    return errors;
+  };
+
+  const handlePostJob = () => {
+    const errors = validateJobForm();
+    setJobFormErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+    const newJob = {
+      id: (allJobs.length + 1).toString(),
+      title: jobForm.title,
+      company: jobForm.company,
+      location: jobForm.location,
+      pay: jobForm.pay,
+      duration: jobForm.duration,
+      skills: jobForm.skills.split(',').map(s => s.trim()),
+      postedTime: jobForm.postedTime,
+      urgency: jobForm.urgency as 'urgent' | 'normal',
+      rating: parseFloat(jobForm.rating),
+      applicants: parseInt(jobForm.applicants),
+      verified: jobForm.verified,
+      category: jobForm.category,
+      description: jobForm.description,
+      requirements: jobForm.requirements.split(',').map(s => s.trim()),
+      benefits: jobForm.benefits.split(',').map(s => s.trim()),
+    };
+    setAllJobs([newJob, ...allJobs]);
+    setShowPostJobModal(false);
+    setJobForm({
+      title: '', company: '', location: '', pay: '', duration: '', skills: '', postedTime: '', urgency: 'normal', rating: '', applicants: '', verified: false, category: '', description: '', requirements: '', benefits: ''
+    });
+    setJobFormErrors({});
+    showSuccess('Job Posted!', 'Your job has been added to the listings.');
+  };
+
   const renderCategoryItem = (category: typeof categories[0]) => {
     const Icon = category.icon;
     const isSelected = selectedCategory === category.id;
@@ -1311,7 +1399,7 @@ export default function HomeScreen() {
           <View style={styles.actionRow}>
             <TouchableOpacity 
               style={styles.actionButton}
-              onPress={() => handleQuickAction('post')}
+              onPress={() => setShowPostJobModal(true)}
             >
               <View style={styles.actionIcon}>
                 <Plus size={20} color="#2563EB" />
@@ -1417,6 +1505,60 @@ export default function HomeScreen() {
         onApply={handleApplyFilters}
         currentFilters={currentFilters}
       />
+
+      {/* Post Job Modal */}
+      <Modal
+        visible={showPostJobModal}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowPostJobModal(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.2)' }}
+        >
+          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 24, width: '90%', maxWidth: 420 }}>
+            <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 16 }}>Post a Job</Text>
+            {([
+              { key: 'title', label: 'Job Title', placeholder: 'e.g. Construction Labourer' },
+              { key: 'company', label: 'Company', placeholder: 'e.g. Maple Construction' },
+              { key: 'location', label: 'Location', placeholder: 'e.g. Toronto, ON' },
+              { key: 'pay', label: 'Pay', placeholder: 'e.g. $22/hr' },
+              { key: 'duration', label: 'Duration', placeholder: 'e.g. Full-time' },
+              { key: 'skills', label: 'Skills (comma separated)', placeholder: 'e.g. Physical Labour, Teamwork' },
+              { key: 'postedTime', label: 'Posted Time', placeholder: 'e.g. 1 min ago' },
+              { key: 'urgency', label: 'Urgency (urgent/normal)', placeholder: 'e.g. urgent' },
+              { key: 'rating', label: 'Rating (0-5)', placeholder: 'e.g. 4.5' },
+              { key: 'applicants', label: 'Applicants', placeholder: 'e.g. 3' },
+              { key: 'verified', label: 'Verified (true/false)', placeholder: 'e.g. true' },
+              { key: 'category', label: 'Category', placeholder: 'e.g. Construction' },
+              { key: 'description', label: 'Description', placeholder: 'Job description...' },
+              { key: 'requirements', label: 'Requirements (comma separated)', placeholder: 'e.g. Physically fit, CSA-approved boots' },
+              { key: 'benefits', label: 'Benefits (comma separated)', placeholder: 'e.g. Health benefits, Overtime pay' },
+            ] as { key: keyof JobForm; label: string; placeholder: string }[]).map(field => (
+              <View key={field.key} style={{ marginBottom: 12 }}>
+                <Text style={{ fontWeight: '600', marginBottom: 4 }}>{field.label}</Text>
+                <TextInput
+                  style={{ borderWidth: 1, borderColor: jobFormErrors[field.key] ? '#EF4444' : '#E5E7EB', borderRadius: 8, padding: 10, fontSize: 15 }}
+                  placeholder={field.placeholder}
+                  value={String(jobForm[field.key])}
+                  onChangeText={text => setJobForm(f => ({ ...f, [field.key]: field.key === 'verified' ? (text === 'true') : text }))}
+                  autoCapitalize="none"
+                />
+                {jobFormErrors[field.key] && <Text style={{ color: '#EF4444', fontSize: 12 }}>{jobFormErrors[field.key]}</Text>}
+              </View>
+            ))}
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 12, marginTop: 8 }}>
+              <TouchableOpacity onPress={() => setShowPostJobModal(false)} style={{ padding: 12 }}>
+                <Text style={{ color: '#6B7280', fontWeight: '600' }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handlePostJob} style={{ backgroundColor: '#2563EB', padding: 12, borderRadius: 8 }}>
+                <Text style={{ color: '#fff', fontWeight: '600' }}>Post Job</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
