@@ -977,6 +977,7 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  // Change selectedCategory to store the category name, not id
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [savedJobs, setSavedJobs] = useState<string[]>([]);
   const [allJobs, setAllJobs] = useState<Job[]>(mockJobs);
@@ -1009,8 +1010,9 @@ export default function HomeScreen() {
 
     // Filter by category
     if (selectedCategory !== 'all') {
+      const categoryName = categories.find(c => c.id === selectedCategory)?.name;
       filtered = filtered.filter(job => 
-        job.category.toLowerCase() === selectedCategory.toLowerCase()
+        job.category.toLowerCase() === (categoryName || '').toLowerCase()
       );
     }
 
@@ -1144,7 +1146,7 @@ export default function HomeScreen() {
 
   const handleCategoryPress = (categoryId: string) => {
     setSelectedCategory(categoryId);
-    const categoryName = categories.find(c => c.id === categoryId)?.name;
+    const categoryName = categories.find(c => c.id === categoryId)?.name || 'All';
     showInfo(`Filtered by ${categoryName}`, `Showing ${categoryName} jobs`);
   };
 
