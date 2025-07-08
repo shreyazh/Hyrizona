@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Animated, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { 
   MapPin, 
@@ -10,6 +10,7 @@ import {
   Star,
   CheckCircle
 } from 'lucide-react-native';
+import { useState, useRef } from 'react';
 
 interface Job {
   id: string;
@@ -33,7 +34,6 @@ interface JobCardProps {
   onApply: (jobId: string) => void;
   isSaved?: boolean;
   isApplied?: boolean;
-  onApplyPress?: (job: Job) => void;
 }
 
 export default function JobCard({ 
@@ -42,12 +42,23 @@ export default function JobCard({
   onSave, 
   onApply, 
   isSaved = false,
-  isApplied,
-  onApplyPress
+  isApplied = false
 }: JobCardProps) {
+  const [loading, setLoading] = useState(false);
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
   const handlePress = () => onPress(job.id);
   const handleSave = () => onSave(job.id);
-  const handleApply = () => onApply(job.id);
+  const handleApply = async () => {
+    if (isApplied || loading) return;
+    setLoading(true);
+    await onApply(job.id);
+    setLoading(false);
+    Animated.sequence([
+      Animated.timing(pulseAnim, { toValue: 1.2, duration: 200, useNativeDriver: true }),
+      Animated.timing(pulseAnim, { toValue: 1, duration: 200, useNativeDriver: true })
+    ]).start();
+  };
 
   return (
     <TouchableOpacity 
@@ -132,15 +143,29 @@ export default function JobCard({
             <Text style={styles.postedTime}>{job.postedTime}</Text>
           </View>
 
-          {isApplied ? (
-            <View style={{ backgroundColor: '#10B981', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 }}>
-              <Text style={{ color: 'white', fontWeight: 'bold' }}>Applied</Text>
-            </View>
-          ) : (
-            <TouchableOpacity onPress={() => onApplyPress ? onApplyPress(job) : onApply?.(job.id)} style={{ backgroundColor: '#2563EB', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 }}>
-              <Text style={{ color: 'white', fontWeight: 'bold' }}>Apply</Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity 
+            style={styles.applyButton}
+            onPress={handleApply}
+            disabled={isApplied || loading}
+          >
+            <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+              <LinearGradient
+                colors={isApplied ? ['#10B981', '#22D3EE'] : ['#2563EB', '#3B82F6']}
+                style={styles.applyGradient}
+              >
+                {loading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : isApplied ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <CheckCircle size={16} color="#fff" />
+                    <Text style={[styles.applyText, { color: '#fff' }]}>Applied</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.applyText}>Apply</Text>
+                )}
+              </LinearGradient>
+            </Animated.View>
+          </TouchableOpacity>
         </View>
 
         {/* Urgency Badge */}
