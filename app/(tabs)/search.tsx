@@ -40,14 +40,61 @@ import {
 import JobCard from '../../components/JobCard';
 import { mockJobs } from './index';
 import { useToast } from '../../hooks/useToast';
+import React from 'react';
 
 const { width } = Dimensions.get('window');
+
+// Move popularSearches definition above TrendingJobsSidebar
+const popularSearches: { term: string; count: number; trending: boolean; growth: string }[] = [
+  { term: 'Construction Labourer', count: 980, trending: true, growth: '+12%' },
+  { term: 'Warehouse Associate', count: 870, trending: false, growth: '+8%' },
+  { term: 'Janitor', count: 650, trending: true, growth: '+15%' },
+  { term: 'Delivery Driver', count: 540, trending: true, growth: '+18%' },
+  { term: 'Retail Cashier', count: 430, trending: false, growth: '+6%' },
+  { term: 'Food Service Worker', count: 390, trending: true, growth: '+10%' },
+  { term: 'Receptionist', count: 320, trending: false, growth: '+5%' },
+  { term: 'Office Clerk', count: 280, trending: false, growth: '+4%' },
+  { term: 'Security Guard', count: 210, trending: true, growth: '+9%' },
+  { term: 'Hotel Housekeeper', count: 180, trending: false, growth: '+3%' },
+  { term: 'Barista', count: 170, trending: true, growth: '+11%' },
+  { term: 'Grocery Stocker', count: 160, trending: false, growth: '+7%' },
+  { term: 'Mover', count: 150, trending: true, growth: '+13%' },
+  { term: 'Landscaping Assistant', count: 140, trending: false, growth: '+6%' },
+  { term: 'Dishwasher', count: 130, trending: true, growth: '+9%' },
+  { term: 'Fast Food Crew', count: 120, trending: true, growth: '+10%' },
+  { term: 'Parking Attendant', count: 110, trending: false, growth: '+4%' },
+  { term: 'Amusement Park Staff', count: 100, trending: true, growth: '+15%' },
+  { term: 'Farm Helper', count: 90, trending: false, growth: '+5%' },
+  { term: 'Event Staff', count: 80, trending: true, growth: '+12%' }
+];
+
+function TrendingJobsSidebar({ onSelect }: { onSelect: (term: string) => void }) {
+  const trendingJobs = popularSearches.filter((j: { term: string; count: number; trending: boolean; growth: string }) => j.trending);
+  return (
+    <View style={styles.trendingSidebar}>
+      <Text style={styles.trendingTitle}>Trending Jobs</Text>
+      {trendingJobs.map((job: { term: string; count: number; trending: boolean; growth: string }, idx: number) => (
+        <TouchableOpacity
+          key={job.term}
+          style={styles.trendingItem}
+          onPress={() => onSelect(job.term)}
+        >
+          <View style={styles.trendingRow}>
+            <Text style={styles.trendingRank}>{idx + 1}</Text>
+            <Text style={styles.trendingTerm}>{job.term}</Text>
+            {job.trending && <TrendingUp size={14} color="#F59E0B" style={{ marginLeft: 4 }} />}
+          </View>
+          <Text style={styles.trendingCount}>{job.count} jobs</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+}
 
 export default function SearchScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const [jobs, setJobs] = useState(mockJobs);
   const [savedJobs, setSavedJobs] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
@@ -84,27 +131,42 @@ export default function SearchScreen() {
 
   // Search suggestions based on query
   const searchSuggestions = [
-    'React Native Developer',
-    'UI/UX Designer',
-    'Product Manager',
-    'Data Scientist',
-    'Marketing Specialist',
-    'Content Writer',
-    'Frontend Developer',
-    'Backend Developer',
-    'DevOps Engineer',
-    'Mobile App Developer'
+    'Construction Labourer',
+    'Warehouse Associate',
+    'Janitor',
+    'Delivery Driver',
+    'Retail Cashier',
+    'Food Service Worker',
+    'Receptionist',
+    'Office Clerk',
+    'Security Guard',
+    'Hotel Housekeeper'
   ].filter(suggestion => 
     suggestion.toLowerCase().includes(searchQuery.toLowerCase())
   ).slice(0, 5);
 
   // Popular searches with real-time data
   const popularSearches = [
-    { term: 'Remote Jobs', count: 1240, trending: true, growth: '+15%' },
-    { term: 'React Developer', count: 890, trending: false, growth: '+8%' },
-    { term: 'UX Designer', count: 567, trending: true, growth: '+23%' },
-    { term: 'Data Analyst', count: 432, trending: false, growth: '+12%' },
-    { term: 'Product Manager', count: 321, trending: true, growth: '+18%' }
+    { term: 'Construction Labourer', count: 980, trending: true, growth: '+12%' },
+    { term: 'Warehouse Associate', count: 870, trending: false, growth: '+8%' },
+    { term: 'Janitor', count: 650, trending: true, growth: '+15%' },
+    { term: 'Delivery Driver', count: 540, trending: true, growth: '+18%' },
+    { term: 'Retail Cashier', count: 430, trending: false, growth: '+6%' },
+    { term: 'Food Service Worker', count: 390, trending: true, growth: '+10%' },
+    { term: 'Receptionist', count: 320, trending: false, growth: '+5%' },
+    { term: 'Office Clerk', count: 280, trending: false, growth: '+4%' },
+    { term: 'Security Guard', count: 210, trending: true, growth: '+9%' },
+    { term: 'Hotel Housekeeper', count: 180, trending: false, growth: '+3%' },
+    { term: 'Barista', count: 170, trending: true, growth: '+11%' },
+    { term: 'Grocery Stocker', count: 160, trending: false, growth: '+7%' },
+    { term: 'Mover', count: 150, trending: true, growth: '+13%' },
+    { term: 'Landscaping Assistant', count: 140, trending: false, growth: '+6%' },
+    { term: 'Dishwasher', count: 130, trending: true, growth: '+9%' },
+    { term: 'Fast Food Crew', count: 120, trending: true, growth: '+10%' },
+    { term: 'Parking Attendant', count: 110, trending: false, growth: '+4%' },
+    { term: 'Amusement Park Staff', count: 100, trending: true, growth: '+15%' },
+    { term: 'Farm Helper', count: 90, trending: false, growth: '+5%' },
+    { term: 'Event Staff', count: 80, trending: true, growth: '+12%' }
   ];
 
   const filters = [
@@ -117,18 +179,26 @@ export default function SearchScreen() {
   ];
 
   const categories = [
-    { id: '1', name: 'Design & Creative', jobs: 45, color: '#8B5CF6', icon: '🎨', growth: '+12%' },
-    { id: '2', name: 'Technology', jobs: 78, color: '#06B6D4', icon: '💻', growth: '+8%' },
-    { id: '3', name: 'Marketing', jobs: 32, color: '#F59E0B', icon: '📈', growth: '+15%' },
-    { id: '4', name: 'Writing & Content', jobs: 24, color: '#10B981', icon: '✍️', growth: '+5%' },
-    { id: '5', name: 'Customer Service', jobs: 18, color: '#EF4444', icon: '🎧', growth: '+3%' },
-    { id: '6', name: 'Sales', jobs: 29, color: '#8B5CF6', icon: '💰', growth: '+10%' },
-    { id: '7', name: 'Healthcare', jobs: 15, color: '#EC4899', icon: '🏥', growth: '+20%' },
-    { id: '8', name: 'Education', jobs: 22, color: '#8B5CF6', icon: '📚', growth: '+7%' }
+    { id: '1', name: 'Construction', jobs: 120, color: '#8B5CF6', icon: '🚧', growth: '+12%' },
+    { id: '2', name: 'Warehouse', jobs: 110, color: '#FF9800', icon: '📦', growth: '+8%' },
+    { id: '3', name: 'Janitorial', jobs: 90, color: '#F59E0B', icon: '🧹', growth: '+15%' },
+    { id: '4', name: 'Delivery', jobs: 85, color: '#10B981', icon: '🚚', growth: '+18%' },
+    { id: '5', name: 'Retail', jobs: 75, color: '#EF4444', icon: '🛒', growth: '+6%' },
+    { id: '6', name: 'Food Service', jobs: 70, color: '#8B5CF6', icon: '🍔', growth: '+10%' },
+    { id: '7', name: 'Clerical', jobs: 60, color: '#EC4899', icon: '🗂️', growth: '+5%' },
+    { id: '8', name: 'Security', jobs: 50, color: '#2563EB', icon: '🛡️', growth: '+9%' },
+    { id: '9', name: 'Hospitality', jobs: 40, color: '#F472B6', icon: '🛏️', growth: '+3%' },
+    { id: '10', name: 'Landscaping', jobs: 35, color: '#4CAF50', icon: '🌳', growth: '+7%' },
+    { id: '11', name: 'Maintenance', jobs: 30, color: '#607D8B', icon: '🔧', growth: '+5%' },
+    { id: '12', name: 'Moving', jobs: 28, color: '#795548', icon: '🚚', growth: '+8%' },
+    { id: '13', name: 'Farm Work', jobs: 22, color: '#8BC34A', icon: '🌾', growth: '+6%' },
+    { id: '14', name: 'Event Staff', jobs: 20, color: '#00BCD4', icon: '🎪', growth: '+12%' },
+    { id: '15', name: 'Parking', jobs: 18, color: '#9E9E9E', icon: '🅿️', growth: '+4%' },
+    { id: '16', name: 'Amusement Park', jobs: 15, color: '#E040FB', icon: '🎢', growth: '+15%' }
   ];
 
   // Enhanced filtering logic
-  const filteredJobs = jobs.filter((job: any) => {
+  const filteredJobs = mockJobs.filter((job: any) => {
     const matchesQuery =
       job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       job.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -186,7 +256,7 @@ export default function SearchScreen() {
 
   // Generate recommendations based on user behavior
   useEffect(() => {
-    const userRecommendations = jobs
+    const userRecommendations = mockJobs
       .filter((job: any) => 
         savedJobs.includes(job.id) || 
         job.skills.some((skill: any) => 
@@ -337,7 +407,7 @@ export default function SearchScreen() {
     setActiveCategory(categoryName === activeCategory ? null : categoryName);
     setCurrentPage(1); // Reset pagination when category changes
     
-    const categoryJobs = jobs.filter((job: any) => 
+    const categoryJobs = mockJobs.filter((job: any) => 
       job.skills.some((skill: any) =>
         skill.toLowerCase().includes(categoryName.toLowerCase()) ||
         job.title.toLowerCase().includes(categoryName.toLowerCase()) ||
@@ -414,7 +484,7 @@ export default function SearchScreen() {
 
   // Get category job counts
   const getCategoryJobCount = (categoryName: string) => {
-    return jobs.filter((job: any) => 
+    return mockJobs.filter((job: any) => 
       job.skills.some((skill: any) =>
         skill.toLowerCase().includes(categoryName.toLowerCase()) ||
         job.title.toLowerCase().includes(categoryName.toLowerCase()) ||
@@ -1004,7 +1074,7 @@ export default function SearchScreen() {
         <View style={styles.tagsSection}>
           <Text style={styles.sectionTitle}>Popular Skills</Text>
           <View style={styles.tagsContainer}>
-            {['React Native', 'Figma', 'SEO', 'Photography', 'Video Editing', 'UI/UX', 'WordPress', 'Social Media'].map((tag, index) => (
+            {['Cleaning', 'Customer Service', 'Cash Handling', 'Food Prep', 'Stocking', 'Landscaping', 'Moving', 'Delivery', 'Communication', 'Teamwork', 'Reliability', 'Organization', 'Dishwashing', 'Barista', 'Event Setup', 'Farm Work', 'Security', 'Reception', 'Clerical', 'Multitasking', 'Problem Solving'].map((tag, index) => (
               <TouchableOpacity 
                 key={index} 
                 style={styles.tag}
@@ -1766,5 +1836,53 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Inter-Medium',
     color: '#2563EB',
+  },
+  searchMainContent: {
+    flexDirection: 'row',
+    flex: 1,
+  },
+  searchMainColumn: {
+    flex: 1,
+  },
+  trendingSidebar: {
+    width: 260,
+    backgroundColor: '#FFFFFF',
+    borderLeftWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: 16,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 12,
+  },
+  trendingTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#2563EB',
+    marginBottom: 12,
+  },
+  trendingItem: {
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  trendingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  trendingRank: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    marginRight: 8,
+  },
+  trendingTerm: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  trendingCount: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
   },
 });

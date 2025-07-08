@@ -35,6 +35,7 @@ import {
 } from 'lucide-react-native';
 import { Job } from './(tabs)';
 import { useToastContext } from '@/contexts/ToastContext';
+import { mockJobs } from './(tabs)/index';
 
 export default function JobDetailsScreen() {
   const router = useRouter();
@@ -56,45 +57,6 @@ export default function JobDetailsScreen() {
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Find job from mock data (in real app, this would be an API call)
-      const mockJobs = [
-        {
-          id: '1',
-          title: 'Freelance Graphic Designer',
-          company: 'Praveen Inc.',
-          location: 'Downtown, 0.5 km',
-          pay: '$25/hr',
-          duration: '2-3 hours',
-          skills: ['Design', 'Photoshop', 'Branding', 'Illustrator', 'UI/UX'],
-          postedTime: '2 min ago',
-          urgency: 'urgent' as const,
-          rating: 4.8,
-          applicants: 3,
-          verified: true,
-          category: 'Design',
-          description: 'Looking for a creative graphic designer to help with brand identity and marketing materials. This role involves creating visually appealing designs for various digital and print media.',
-          requirements: ['2+ years experience', 'Portfolio required', 'Adobe Creative Suite', 'Strong communication skills', 'Ability to work under pressure'],
-          benefits: ['Flexible hours', 'Remote work option', 'Competitive pay', 'Creative freedom', 'Professional growth']
-        },
-        {
-          id: '2',
-          title: 'Event Setup Assistant',
-          company: 'Anubhav Agency',
-          location: 'City Center, 1.2 km',
-          pay: '$18/hr',
-          duration: '4-6 hours',
-          skills: ['Physical Work', 'Team Work', 'Customer Service'],
-          postedTime: '15 min ago',
-          urgency: 'normal' as const,
-          rating: 4.6,
-          applicants: 8,
-          verified: true,
-          category: 'Events',
-          description: 'Help set up and manage events including equipment setup and customer service. This is a hands-on role that requires physical stamina and excellent interpersonal skills.',
-          requirements: ['Physical stamina', 'Team player', 'Weekend availability', 'Customer service experience', 'Reliable transportation'],
-          benefits: ['Free meals', 'Event networking', 'Performance bonuses', 'Flexible scheduling', 'Fun work environment']
-        }
-      ];
-      
       const foundJob = mockJobs.find(j => j.id === jobId);
       if (foundJob) {
         setJob(foundJob);

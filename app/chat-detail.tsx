@@ -48,12 +48,12 @@ interface QuickReply {
 const { width } = Dimensions.get('window');
 
 const mockChats = [
-  { id: '1', name: 'Shailaja', avatar: '👩‍💼', online: true, lastSeen: '2 min ago' },
-  { id: '2', name: 'Praveen Srivastava', avatar: '👨‍💻', online: false, lastSeen: '1 hour ago' },
-  { id: '3', name: 'Anubhav Anant', avatar: '👨‍🔬', online: true, lastSeen: 'now' },
-  { id: '4', name: 'Sanjeev', avatar: '👨‍💼', online: false, lastSeen: '30 min ago' },
-  { id: '5', name: 'Sameet', avatar: '👨‍🎨', online: true, lastSeen: 'now' },
-  { id: '6', name: 'Venu', avatar: '👨‍💻', online: false, lastSeen: '2 hours ago' },
+  { id: '1', name: 'Shailaja', avatar: '👩‍🍳', online: true, lastSeen: '2 min ago' },
+  { id: '2', name: 'Anurag', avatar: '👨‍🔧', online: false, lastSeen: '1 hour ago' },
+  { id: '3', name: 'Anubhav Anant', avatar: '🧹', online: true, lastSeen: 'now' },
+  { id: '4', name: 'Praveen Srivastava', avatar: '🛒', online: false, lastSeen: '30 min ago' },
+  { id: '5', name: 'Sanjeev', avatar: '📦', online: true, lastSeen: 'now' },
+  { id: '6', name: 'Sameet', avatar: '🚧', online: false, lastSeen: '2 hours ago' },
 ];
 
 const quickReplies: QuickReply[] = [
@@ -77,21 +77,21 @@ export default function ChatDetail() {
   const [messages, setMessages] = useState<Message[]>([
     { 
       id: '1', 
-      text: 'Hello! How can I help you with the job opportunity?', 
+      text: 'Hello! How can I help you with the Barista position at Maple Café?', 
       sender: 'them', 
       timestamp: Date.now() - 60000,
       status: 'read'
     },
     { 
       id: '2', 
-      text: 'Hi! I am interested in your job post. Can you tell me more about the requirements?', 
+      text: 'Hi! I am interested in the Barista job. Can you tell me more about the requirements?', 
       sender: 'me', 
       timestamp: Date.now() - 30000,
       status: 'read'
     },
     {
       id: '3',
-      text: 'Sure! The position requires 3+ years of experience in React Native development, strong knowledge of TypeScript, and experience with mobile app deployment.',
+      text: 'Sure! We are looking for someone with a friendly attitude, good communication skills, and the ability to work flexible shifts. Previous café or customer service experience is a plus, but not required.',
       sender: 'them',
       timestamp: Date.now() - 15000,
       status: 'read'
