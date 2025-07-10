@@ -992,7 +992,7 @@ type JobForm = {
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { user } = useUser();
+  const { user, isLoading } = useUser();
   const { showSuccess, showError, showInfo } = useToastContext();
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -1036,6 +1036,7 @@ export default function HomeScreen() {
     benefits: '',
   });
   const [jobFormErrors, setJobFormErrors] = useState<Partial<Record<keyof JobForm, string>>>({});
+  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
 
   // Initialize displayed jobs
   useEffect(() => {
@@ -1306,6 +1307,19 @@ export default function HomeScreen() {
            currentFilters.salaryRange.max < 1000;
   };
 
+  // Add auth check and loading spinner
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F9FAFB' }}>
+        <ActivityIndicator size="large" color="#2563EB" />
+      </View>
+    );
+  }
+  if (!user) {
+    router.replace('/auth/login');
+    return null;
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <LocationHeader 
@@ -1540,13 +1554,32 @@ export default function HomeScreen() {
               ] as { key: keyof JobForm; label: string; placeholder: string }[]).map(field => (
                 <View key={field.key} style={{ marginBottom: 12 }}>
                   <Text style={{ fontWeight: '600', marginBottom: 4 }}>{field.label}</Text>
-                  <TextInput
-                    style={{ borderWidth: 1, borderColor: jobFormErrors[field.key] ? '#EF4444' : '#E5E7EB', borderRadius: 8, padding: 10, fontSize: 15 }}
-                    placeholder={field.placeholder}
-                    value={String(jobForm[field.key])}
-                    onChangeText={text => setJobForm(f => ({ ...f, [field.key]: field.key === 'verified' ? (text === 'true') : text }))}
-                    autoCapitalize="none"
-                  />
+                  {field.key === 'category' ? (
+                    <TouchableOpacity
+                      style={{
+                        borderWidth: 1,
+                        borderColor: jobFormErrors[field.key] ? '#EF4444' : '#E5E7EB',
+                        borderRadius: 8,
+                        padding: 10,
+                        minHeight: 40,
+                        justifyContent: 'center',
+                        backgroundColor: '#f9fafb'
+                      }}
+                      onPress={() => setShowCategoryPicker(true)}
+                    >
+                      <Text style={{ color: jobForm.category ? '#111827' : '#9CA3AF', fontSize: 15 }}>
+                        {jobForm.category || 'Select a category'}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TextInput
+                      style={{ borderWidth: 1, borderColor: jobFormErrors[field.key] ? '#EF4444' : '#E5E7EB', borderRadius: 8, padding: 10, fontSize: 15 }}
+                      placeholder={field.placeholder}
+                      value={String(jobForm[field.key])}
+                      onChangeText={text => setJobForm(f => ({ ...f, [field.key]: field.key === 'verified' ? (text === 'true') : text }))}
+                      autoCapitalize="none"
+                    />
+                  )}
                   {jobFormErrors[field.key] && <Text style={{ color: '#EF4444', fontSize: 12 }}>{jobFormErrors[field.key]}</Text>}
                 </View>
               ))}
@@ -1561,6 +1594,53 @@ export default function HomeScreen() {
             </ScrollView>
           </View>
         </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Category Picker Modal */}
+      <Modal
+        visible={showCategoryPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowCategoryPicker(false)}
+      >
+        <TouchableOpacity
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.2)',
+            justifyContent: 'center',
+            alignItems: 'center'
+          }}
+          activeOpacity={1}
+          onPressOut={() => setShowCategoryPicker(false)}
+        >
+          <View style={{
+            backgroundColor: '#fff',
+            borderRadius: 12,
+            padding: 20,
+            width: '80%',
+            maxHeight: 400
+          }}>
+            <Text style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 12 }}>Select Category</Text>
+            <ScrollView>
+              {categories.filter(c => c.id !== 'all').map(cat => (
+                <TouchableOpacity
+                  key={cat.id}
+                  style={{
+                    paddingVertical: 12,
+                    borderBottomWidth: 1,
+                    borderBottomColor: '#eee'
+                  }}
+                  onPress={() => {
+                    setJobForm(f => ({ ...f, category: cat.name }));
+                    setShowCategoryPicker(false);
+                  }}
+                >
+                  <Text style={{ fontSize: 16 }}>{cat.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
       </Modal>
     </SafeAreaView>
   );

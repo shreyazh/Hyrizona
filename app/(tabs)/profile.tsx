@@ -7,7 +7,8 @@ import {
   TouchableOpacity,
   Switch,
   Alert,
-  Image
+  Image,
+  ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -28,7 +29,7 @@ import { useUser } from '../../contexts/UserContext';
 import { useRouter } from 'expo-router';
 
 export default function ProfileScreen() {
-  const { user, logout } = useUser();
+  const { user, logout, isLoading } = useUser();
   const router = useRouter();
   const [isAvailable, setIsAvailable] = useState(true);
   const [currentMode, setCurrentMode] = useState<'seeker' | 'poster'>(user?.userType || 'seeker');
@@ -39,6 +40,13 @@ export default function ProfileScreen() {
       setCurrentMode(user.userType);
     }
   }, [user?.userType]);
+
+  // Redirect to login if not logged in and not loading
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.replace('/auth/login');
+    }
+  }, [isLoading, user, router]);
 
   const stats = {
     seeker: {
@@ -234,6 +242,10 @@ export default function ProfileScreen() {
       </View>
     </>
   );
+
+  if (isLoading) {
+    return <ActivityIndicator size="large" color="#2563EB" style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }} />;
+  }
 
   return (
     <SafeAreaView style={styles.container}>
