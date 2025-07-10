@@ -95,8 +95,7 @@ export default function RegisterScreen() {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.7,
+      quality: 0.8,
     });
     if (!result.canceled && result.assets && result.assets.length > 0) {
       updateFormData(field, result.assets[0].uri);
@@ -145,7 +144,7 @@ export default function RegisterScreen() {
                   <TextInput
                     style={getInputStyle('firstName')}
                     placeholder="First name"
-                    placeholderTextColor="#000"
+                    placeholderTextColor="#000000"
                     value={formData.firstName}
                     onChangeText={(value) => updateFormData('firstName', value)}
                     autoCapitalize="words"
@@ -162,7 +161,7 @@ export default function RegisterScreen() {
                   <TextInput
                     style={getInputStyle('lastName')}
                     placeholder="Last name"
-                    placeholderTextColor="#000"
+                    placeholderTextColor="#000000"
                     value={formData.lastName}
                     onChangeText={(value) => updateFormData('lastName', value)}
                     autoCapitalize="words"
@@ -199,7 +198,7 @@ export default function RegisterScreen() {
                 <TextInput
                   style={getInputStyle('phone')}
                   placeholder="Phone number"
-                  placeholderTextColor="#000"
+                  placeholderTextColor="#000000"
                   value={formData.phone}
                   onChangeText={(value) => updateFormData('phone', value)}
                   keyboardType="phone-pad"
@@ -217,7 +216,7 @@ export default function RegisterScreen() {
                 <TextInput
                   style={getInputStyle('address')}
                   placeholder="Address"
-                  placeholderTextColor="#000"
+                  placeholderTextColor="#000000"
                   value={formData.address}
                   onChangeText={(value) => updateFormData('address', value)}
                   autoCapitalize="words"
@@ -247,7 +246,7 @@ export default function RegisterScreen() {
                 <TextInput
                   style={[getInputStyle('password'), styles.passwordInput]}
                   placeholder="Password"
-                  placeholderTextColor="#000"
+                  placeholderTextColor="#000000"
                   value={formData.password}
                   onChangeText={(value) => updateFormData('password', value)}
                   secureTextEntry={!showPassword}
@@ -276,7 +275,7 @@ export default function RegisterScreen() {
                 <TextInput
                   style={[getInputStyle('confirmPassword'), styles.passwordInput]}
                   placeholder="Confirm password"
-                  placeholderTextColor="#000"
+                  placeholderTextColor="#000000"
                   value={formData.confirmPassword}
                   onChangeText={(value) => updateFormData('confirmPassword', value)}
                   secureTextEntry={!showConfirmPassword}
@@ -409,7 +408,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Inter-Regular',
     color: '#111827',
-    placeholderTextColor: '#9CA3AF',
   },
   inputError: {
     borderColor: '#EF4444',

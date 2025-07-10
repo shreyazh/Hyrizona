@@ -417,8 +417,8 @@ export default function SettingsScreen() {
           
           <SettingItem
             icon={Moon}
-            title="Dark Mode"
-            subtitle="Switch between light and dark themes"
+            title="Newsletter"
+            subtitle="Join our newsletter to get the latest updates and news."
             showChevron={false}
             rightElement={
               <Switch

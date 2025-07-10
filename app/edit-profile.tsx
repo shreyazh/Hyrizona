@@ -11,9 +11,7 @@ import {
   Platform,
   Image,
   Animated,
-  Dimensions,
-  PanGestureHandler,
-  State
+  Dimensions
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -182,6 +180,7 @@ export default function EditProfileScreen() {
   ];
 
   const handleChangePhoto = async () => {
+    Alert.alert('Tapped!', 'Photo icon tapped'); // Add this line
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       
@@ -197,7 +196,6 @@ export default function EditProfileScreen() {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
-        aspect: [1, 1],
         quality: 0.8,
       });
 
@@ -369,8 +367,8 @@ export default function EditProfileScreen() {
                 disabled={photoUploading}
               >
                 {photoUploading ? (
-                  <Animated.View style={styles.uploadingSpinner}>
-                    <Text style={styles.uploadingText}>...</Text>
+                  <Animated.View style={styles.loadingSpinner}>
+                    <Text style={styles.loadingText}>...</Text>
                   </Animated.View>
                 ) : (
                   <Camera size={16} color="white" />
