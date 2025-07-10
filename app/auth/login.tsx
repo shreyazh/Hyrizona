@@ -102,6 +102,7 @@ export default function LoginScreen() {
                 <TextInput
                   style={getInputStyle('email')}
                   placeholder="Email address"
+                  placeholderTextColor="#000"
                   value={formData.email}
                   onChangeText={(value) => updateFormData('email', value)}
                   keyboardType="email-address"
@@ -120,6 +121,7 @@ export default function LoginScreen() {
                 <TextInput
                   style={[getInputStyle('password'), styles.passwordInput]}
                   placeholder="Password"
+                  placeholderTextColor="#000"
                   value={formData.password}
                   onChangeText={(value) => updateFormData('password', value)}
                   secureTextEntry={!showPassword}

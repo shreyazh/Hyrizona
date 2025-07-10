@@ -3,6 +3,14 @@
     "appVersionSource": "remote"
   },
   "build": {
+    "preview": {
+      "android": {
+        "buildType": "apk",
+        "env": {
+          "ENV": "preview"
+        }
+      }
+    },
     "production": {
       "android": {
         "buildType": "app-bundle",
