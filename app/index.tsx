@@ -6,9 +6,9 @@ export default function InitialScreen() {
   const router = useRouter();
 
   useEffect(() => {
-    // Check if user has completed onboarding
-    const hasCompletedOnboarding = false; // This would come from AsyncStorage
-    const isAuthenticated = false; // This would come from auth state
+    // check if user has completed onboarding
+    const hasCompletedOnboarding = false; // this would come from AsyncStorage
+    const isAuthenticated = false; // this would come from auth state
 
     if (!hasCompletedOnboarding) {
       router.replace('/onboarding');

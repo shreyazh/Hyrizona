@@ -1307,18 +1307,7 @@ export default function HomeScreen() {
            currentFilters.salaryRange.max < 1000;
   };
 
-  // Add auth check and loading spinner
-  if (isLoading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F9FAFB' }}>
-        <ActivityIndicator size="large" color="#2563EB" />
-      </View>
-    );
-  }
-  if (!user) {
-    router.replace('/auth/login');
-    return null;
-  }
+
 
   return (
     <SafeAreaView style={styles.container}>
