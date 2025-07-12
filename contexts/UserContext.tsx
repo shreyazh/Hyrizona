@@ -6,6 +6,7 @@ export interface User {
   firstName: string;
   lastName: string;
   email: string;
+  password: string; // For demo purposes - in production, never store passwords in plain text
   userType: 'seeker' | 'poster';
   location?: string;
   avatar?: string;
@@ -84,29 +85,71 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     }
   };
 
+  const saveUserToJSON = async (userData: User) => {
+    try {
+      // Get existing users
+      const existingUsersData = await AsyncStorage.getItem('users');
+      const existingUsers: User[] = existingUsersData ? JSON.parse(existingUsersData) : [];
+      
+      // Check if user already exists
+      const existingUserIndex = existingUsers.findIndex(u => u.email === userData.email);
+      
+      if (existingUserIndex >= 0) {
+        // Update existing user
+        existingUsers[existingUserIndex] = userData;
+      } else {
+        // Add new user
+        existingUsers.push(userData);
+      }
+      
+      // Save updated users list
+      await AsyncStorage.setItem('users', JSON.stringify(existingUsers));
+    } catch (error) {
+      console.error('Error saving user to JSON:', error);
+    }
+  };
+
+  const getUserFromJSON = async (email: string, password: string): Promise<User | null> => {
+    try {
+      const usersData = await AsyncStorage.getItem('users');
+      if (!usersData) return null;
+      
+      const users: User[] = JSON.parse(usersData);
+      const foundUser = users.find(u => u.email === email && u.password === password);
+      
+      return foundUser || null;
+    } catch (error) {
+      console.error('Error getting user from JSON:', error);
+      return null;
+    }
+  };
+
+  const checkUserExists = async (email: string): Promise<boolean> => {
+    try {
+      const usersData = await AsyncStorage.getItem('users');
+      if (!usersData) return false;
+      
+      const users: User[] = JSON.parse(usersData);
+      return users.some(u => u.email === email);
+    } catch (error) {
+      console.error('Error checking if user exists:', error);
+      return false;
+    }
+  };
+
   const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
       setIsLoading(true);
       
-      // TODO: Replace with actual Supabase API call
-      // For now, simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Check if user exists in JSON database
+      const foundUser = await getUserFromJSON(email, password);
       
-      // Mock user data - replace with actual API response
-      const mockUser: User = {
-        id: '1',
-        firstName: 'John',
-        lastName: 'Doe',
-        email: email,
-        userType: 'seeker',
-        location: 'New York, USA',
-        isVerified: true,
-        createdAt: new Date().toISOString(),
-        phone: '123-456-7890',
-      };
+      if (!foundUser) {
+        return { success: false, error: 'Invalid email or password' };
+      }
 
-      setUser(mockUser);
-      await saveUserToStorage(mockUser);
+      setUser(foundUser);
+      await saveUserToStorage(foundUser);
       
       return { success: true };
     } catch (error) {
@@ -120,14 +163,18 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     try {
       setIsLoading(true);
       
-      // TODO: Replace with actual Supabase API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Check if user already exists
+      const userExists = await checkUserExists(userData.email);
+      if (userExists) {
+        return { success: false, error: 'User with this email already exists' };
+      }
       
       const newUser: User = {
         id: Date.now().toString(),
         firstName: userData.firstName,
         lastName: userData.lastName,
         email: userData.email,
+        password: userData.password, // In production, hash this password
         userType: userData.userType,
         location: 'Unknown',
         isVerified: false,
@@ -138,6 +185,10 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         phone: userData.phone,
       };
 
+      // Save to JSON database
+      await saveUserToJSON(newUser);
+      
+      // Set as current user
       setUser(newUser);
       await saveUserToStorage(newUser);
       
@@ -161,10 +212,10 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const updateUser = async (updates: Partial<User>) => {
     if (user) {
       try {
-        await new Promise(resolve => setTimeout(resolve, 500));
         const updatedUser = { ...user, ...updates };
         setUser(updatedUser);
         await saveUserToStorage(updatedUser);
+        await saveUserToJSON(updatedUser);
       } catch (error) {
         console.error('Error updating user:', error);
         throw error;
