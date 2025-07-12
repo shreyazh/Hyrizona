@@ -47,7 +47,7 @@ export default function Auth0SignUpScreen() {
     try {
       const credentials = await auth0.webAuth.authorize({
         scope: 'openid profile email',
-        audience: 'https://magic4ai.auth0.com/userinfo',
+        audience: 'https://dev-jbrriuc5vyjmiwtx.us.auth0.com/userinfo',
       });
 
       if (credentials?.accessToken) {
