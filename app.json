@@ -9,7 +9,16 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": [
+              "hyrizona"
+            ]
+          }
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -21,7 +30,21 @@
         "android.permission.RECORD_AUDIO",
         "android.permission.CAMERA"
       ],
-      "package": "com.ai4magic.hyrizona"
+      "package": "com.ai4magic.hyrizona",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": {
+            "scheme": "hyrizona",
+            "host": "com.ai4magic.hyrizona",
+            "pathPrefix": "/callback"
+          },
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -35,7 +58,8 @@
       "expo-location",
       "expo-notifications",
       "expo-image-picker",
-      "expo-camera"
+      "expo-camera",
+      "react-native-auth0"
     ],
     "experiments": {
       "typedRoutes": true
