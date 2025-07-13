@@ -1,204 +1,72 @@
-import { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TextInput, 
-  TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Alert
-} from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Eye, EyeOff, Mail, Lock, ArrowLeft } from 'lucide-react-native';
-import { useUser } from '../../contexts/UserContext';
-import { validateLoginForm } from '../../utils/validation';
+import * as AuthSession from 'expo-auth-session';
+import { useAuthRequest } from 'expo-auth-session';
+import { ArrowLeft } from 'lucide-react-native';
 
-const supabaseUrl = 'YOUR_SUPABASE_URL';
-const supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY';
+const auth0ClientId = 'HHkjs4uACOc1O27m3v865SJqbMdAcEfZ';
+const auth0Domain = 'dev-jbrriuc5vyjmiwtx.us.auth0.com';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { login } = useUser();
-  const [formData, setFormData] = useState({
-    email: '',
-    password: ''
-  });
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const discovery = AuthSession.useAutoDiscovery(`https://${auth0Domain}`);
 
-  const handleLogin = async () => {
-    // Clear previous errors
-    setErrors({});
-    
-    // Validate form
-    const validation = validateLoginForm(formData);
-    if (!validation.isValid) {
-      setErrors(validation.errors);
+  const [request, response, promptAsync] = useAuthRequest(
+    {
+      clientId: auth0ClientId,
+      scopes: ['openid', 'profile', 'email'],
+      redirectUri: AuthSession.makeRedirectUri(),
+    },
+    discovery
+  );
+
+  React.useEffect(() => {
+    if (response?.type === 'success') {
+      Alert.alert('Login Success', 'You are logged in!');
+      router.replace('/(tabs)');
+    } else if (response?.type === 'error') {
+      Alert.alert('Login failed', response.error?.message || 'Unexpected error');
+    }
+  }, [response]);
+
+  const handleLoginWithAuth0 = () => {
+    if (!discovery) {
+      Alert.alert('Discovery Error', 'Auth0 discovery document not loaded.');
       return;
     }
-
-    setLoading(true);
-    
-    try {
-      const result = await login(formData.email, formData.password);
-      
-      if (result.success) {
-        router.replace('/(tabs)');
-      } else {
-        Alert.alert('Error', result.error || 'Login failed. Please check your credentials.');
-      }
-    } catch (error) {
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const updateFormData = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    // Clear error when user starts typing
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
-    }
-  };
-
-  const getInputStyle = (field: string) => [
-    styles.input,
-    errors[field] && styles.inputError
-  ];
-
-  const handleSocialLogin = (provider: string) => {
-    Alert.alert('Coming Soon', `${provider} login will be available soon`);
+    promptAsync();
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
-      >
-        <ScrollView showsVerticalScrollIndicator={false}>
-          <View style={styles.header}>
-            <TouchableOpacity 
-              style={styles.backButton}
-              onPress={() => router.back()}
-            >
-              <ArrowLeft size={24} color="#2563EB" />
-            </TouchableOpacity>
-            
-            <Text style={styles.title}>Welcome Back</Text>
-            <Text style={styles.subtitle}>Sign in to continue your journey</Text>
-          </View>
+      <View style={styles.header}>
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <ArrowLeft size={24} color="#2563EB" />
+        </TouchableOpacity>
 
-          <View style={styles.form}>
-            <View style={styles.inputContainer}>
-              <View style={styles.inputWrapper}>
-                <Mail size={20} color="#6B7280" style={styles.inputIcon} />
-                <TextInput
-                  style={getInputStyle('email')}
-                  placeholder="Email address"
-                  placeholderTextColor="#000"
-                  value={formData.email}
-                  onChangeText={(value) => updateFormData('email', value)}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoComplete="email"
-                />
-              </View>
-              {errors.email && (
-                <Text style={styles.errorText}>{errors.email}</Text>
-              )}
-            </View>
+        <Text style={styles.title}>Welcome Back ABC</Text>
+        <Text style={styles.subtitle}>Sign in with your account</Text>
+      </View>
 
-            <View style={styles.inputContainer}>
-              <View style={styles.inputWrapper}>
-                <Lock size={20} color="#6B7280" style={styles.inputIcon} />
-                <TextInput
-                  style={[getInputStyle('password'), styles.passwordInput]}
-                  placeholder="Password"
-                  placeholderTextColor="#000"
-                  value={formData.password}
-                  onChangeText={(value) => updateFormData('password', value)}
-                  secureTextEntry={!showPassword}
-                  autoComplete="password"
-                />
-                <TouchableOpacity 
-                  style={styles.eyeButton}
-                  onPress={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? (
-                    <EyeOff size={20} color="#6B7280" />
-                  ) : (
-                    <Eye size={20} color="#6B7280" />
-                  )}
-                </TouchableOpacity>
-              </View>
-              {errors.password && (
-                <Text style={styles.errorText}>{errors.password}</Text>
-              )}
-            </View>
-
-            <TouchableOpacity 
-              style={styles.forgotPassword}
-              onPress={() => router.push('/auth/forgot-password')}
-            >
-              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.loginButton}
-              onPress={handleLogin}
-              disabled={loading}
-            >
-              <LinearGradient
-                colors={['#2563EB', '#3B82F6']}
-                style={styles.loginButtonGradient}
-              >
-                <Text style={styles.loginButtonText}>
-                  {loading ? 'Signing In...' : 'Sign In'}
-                </Text>
-              </LinearGradient>
-            </TouchableOpacity>
-
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            <TouchableOpacity 
-              style={styles.socialButton}
-              onPress={() => handleSocialLogin('Google')}
-            >
-              <Text style={styles.socialButtonText}>Continue with Google</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.socialButton}
-              onPress={() => handleSocialLogin('Apple')}
-            >
-              <Text style={styles.socialButtonText}>Continue with Apple</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>
-              Don't have an account?{' '}
-              <Text 
-                style={styles.footerLink}
-                onPress={() => router.push('/auth/register')}
-              >
-                Sign Up
-              </Text>
-            </Text>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+      <View style={styles.form}>
+        <TouchableOpacity 
+          style={styles.loginButton}
+          onPress={handleLoginWithAuth0}
+        >
+          <LinearGradient
+            colors={['#2563EB', '#3B82F6']}
+            style={styles.loginButtonGradient}
+          >
+            <Text style={styles.loginButtonText}>Sign In with Auth0</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
@@ -206,143 +74,47 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  keyboardView: {
-    flex: 1,
+    backgroundColor: '#fff',
+    paddingHorizontal: 24,
+    justifyContent: 'center',
   },
   header: {
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 32,
+    marginBottom: 32,
+    alignItems: 'flex-start',
   },
   backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#F3F4F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 16,
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#F1F5F9',
+    alignSelf: 'flex-start',
   },
   title: {
-    fontSize: 32,
-    fontFamily: 'Inter-Bold',
-    color: '#111827',
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#2563EB',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    fontFamily: 'Inter-Regular',
-    color: '#6B7280',
+    color: '#64748B',
+    marginBottom: 16,
   },
   form: {
-    paddingHorizontal: 24,
-  },
-  inputContainer: {
-    marginBottom: 20,
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    paddingHorizontal: 16,
-  },
-  inputIcon: {
-    marginRight: 12,
-  },
-  input: {
-    flex: 1,
-    paddingVertical: 16,
-    fontSize: 16,
-    fontFamily: 'Inter-Regular',
-    color: '#111827',
-  },
-  inputError: {
-    borderColor: '#EF4444',
-  },
-  passwordInput: {
-    paddingRight: 48,
-  },
-  eyeButton: {
-    position: 'absolute',
-    right: 16,
-    padding: 4,
-  },
-  forgotPassword: {
-    alignSelf: 'flex-end',
-    marginBottom: 32,
-  },
-  forgotPasswordText: {
-    fontSize: 14,
-    fontFamily: 'Inter-Medium',
-    color: '#2563EB',
+    marginTop: 24,
   },
   loginButton: {
-    marginBottom: 24,
+    borderRadius: 8,
+    overflow: 'hidden',
   },
   loginButtonGradient: {
     paddingVertical: 16,
-    borderRadius: 12,
     alignItems: 'center',
+    borderRadius: 8,
   },
   loginButtonText: {
-    fontSize: 18,
-    fontFamily: 'Inter-SemiBold',
-    color: 'white',
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#E5E7EB',
-  },
-  dividerText: {
-    paddingHorizontal: 16,
-    fontSize: 14,
-    fontFamily: 'Inter-Regular',
-    color: '#6B7280',
-  },
-  socialButton: {
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  socialButtonText: {
+    color: '#fff',
     fontSize: 16,
-    fontFamily: 'Inter-Medium',
-    color: '#374151',
-  },
-  footer: {
-    paddingHorizontal: 24,
-    paddingTop: 32,
-    paddingBottom: 24,
-    alignItems: 'center',
-  },
-  footerText: {
-    fontSize: 16,
-    fontFamily: 'Inter-Regular',
-    color: '#6B7280',
-  },
-  footerLink: {
-    color: '#2563EB',
-    fontFamily: 'Inter-Medium',
-  },
-  errorText: {
-    fontSize: 14,
-    fontFamily: 'Inter-Regular',
-    color: '#EF4444',
-    marginTop: 4,
+    fontWeight: 'bold',
   },
 });
