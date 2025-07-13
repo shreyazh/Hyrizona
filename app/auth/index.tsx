@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useRouter } from 'expo-router';
-import { View, StyleSheet, Alert } from 'react-native';
+import { View, StyleSheet, Alert, Platform } from 'react-native';
 import * as AuthSession from 'expo-auth-session';
 import { useAuthRequest, makeRedirectUri } from 'expo-auth-session';
 
@@ -16,7 +16,7 @@ const discovery = {
 export default function InitialScreen() {
   const router = useRouter();
 
-  const redirectUri = makeRedirectUri({ useProxy: true });
+  const redirectUri = makeRedirectUri({ useProxy: Platform.OS !== 'web' });
 
   const [request, response, promptAsync] = useAuthRequest(
     {
@@ -28,21 +28,19 @@ export default function InitialScreen() {
     discovery
   );
 
-  // Auto-trigger Auth0 login once everything is ready
   useEffect(() => {
-    const hasCompletedOnboarding = true;
-    const isAuthenticated = false;
+    const hasCompletedOnboarding = true; // You can replace this with AsyncStorage logic
+    const isAuthenticated = false; // Replace with token-based check
 
     if (!hasCompletedOnboarding) {
       router.replace('/onboarding');
     } else if (!isAuthenticated && request) {
-      promptAsync();
+      promptAsync(); // works on both mobile and web
     } else if (isAuthenticated) {
       router.replace('/(tabs)');
     }
   }, [request]);
 
-  // Handle result
   useEffect(() => {
     if (response?.type === 'success') {
       Alert.alert('Login Success', 'Welcome!');
