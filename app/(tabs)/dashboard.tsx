@@ -4,7 +4,7 @@ import { View, Text, StyleSheet } from 'react-native';
 export default function Screen() {
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>Search Jobs</Text>
+      <Text style={styles.text}>Employer Dashboard</Text>
     </View>
   );
 }

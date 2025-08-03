@@ -1,4 +1,9 @@
 import { useState } from 'react';
+
+import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
+
 import { 
   View, 
   Text, 
@@ -17,6 +22,22 @@ import Animated, {
 } from 'react-native-reanimated';
 
 type UserType = 'seeker' | 'poster' | null;
+
+const setItem = async (key: string, value: string) => {
+  if (Platform.OS === 'web') {
+    await AsyncStorage.setItem(key, value);
+  } else {
+    await SecureStore.setItemAsync(key, value);
+  }
+};
+
+const getItem = async (key: string) => {
+  if (Platform.OS === 'web') {
+    return await AsyncStorage.getItem(key);
+  } else {
+    return await SecureStore.getItemAsync(key);
+  }
+};
 
 export default function UserTypeScreen() {
   const router = useRouter();
@@ -41,10 +62,11 @@ export default function UserTypeScreen() {
       Alert.alert('Selection Required', 'Please select how you plan to use Hyrizona');
       return;
     }
-    
+    setItem('hasCompletedOnboarding', 'true');
+
     // Store user type preference
     console.log('Selected user type:', selectedType);
-    router.push('/auth');
+    router.push('/');
   };
 
   const seekerAnimatedStyle = useAnimatedStyle(() => ({

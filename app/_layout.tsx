@@ -1,58 +1,59 @@
-import { useEffect } from 'react';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import { useFrameworkReady } from '../hooks/useFrameworkReady';
-import { useFonts } from 'expo-font';
-import {
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold
-} from '@expo-google-fonts/inter';
-import * as SplashScreen from 'expo-splash-screen';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { UserProvider } from '../contexts/UserContext';
+import React from 'react';
+import { Slot } from 'expo-router';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { ToastProvider } from '../contexts/ToastContext';
+import Toast from '../components/Toast';
+import { UserProvider, useUser } from '../contexts/UserContext'; // ✅ add UserProvider
 
-// Prevent splash screen from auto-hiding
-SplashScreen.preventAutoHideAsync();
-
-export default function RootLayout() {
-  useFrameworkReady();
-
-  const [fontsLoaded, fontError] = useFonts({
-    'Inter-Regular': Inter_400Regular,
-    'Inter-Medium': Inter_500Medium,
-    'Inter-SemiBold': Inter_600SemiBold,
-    'Inter-Bold': Inter_700Bold,
-  });
-
-  useEffect(() => {
-    if (fontsLoaded || fontError) {
-      SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded, fontError]);
-
-  if (!fontsLoaded && !fontError) {
-    return null;
-  }
-
+export default function Layout() {
   return (
-    <UserProvider>
+    <UserProvider> {/* ✅ Wrap everything in UserProvider */}
       <ToastProvider>
-        <GestureHandlerRootView style={{ flex: 1 }}>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="onboarding" />
-            <Stack.Screen name="auth" />
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="settings-screens" />
-            <Stack.Screen name="edit-profile" />
-            <Stack.Screen name="+not-found" />
-            <Stack.Screen name="job-details" />
-          </Stack>
-          <StatusBar style="auto" />
-        </GestureHandlerRootView>
+        <LayoutContent />
+        <Toast />
       </ToastProvider>
     </UserProvider>
+  );
+}
+
+function LayoutContent() {
+  const { isAuthenticated, user, logout } = useUser();
+
+  return (
+    <View style={{ flex: 1 }}>
+      <View style={{
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        backgroundColor: '#2563EB',
+        alignItems: 'center'
+      }}>
+        {isAuthenticated ? (
+          <>
+            <Text style={{ color: 'white', fontSize: 16 }}>
+             <Text style={{ color: 'white', fontSize: 16 }}>
+  Hello, {String(user?.email || 'User')}!
+</Text>
+            </Text>
+            <TouchableOpacity onPress={logout}>
+              <Text style={{
+                color: 'white',
+                fontWeight: 'bold',
+                padding: 6,
+                backgroundColor: '#1E40AF',
+                borderRadius: 6
+              }}>
+                Logout
+              </Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <Text style={{ color: 'white', fontSize: 16 }}>Welcome to the App</Text>
+        )}
+      </View>
+
+      <Slot />
+    </View>
   );
 }
